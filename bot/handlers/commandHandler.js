@@ -9,6 +9,7 @@ const shop = require('../commands/shop');
 const profile = require('../commands/profile');
 const admin = require('../commands/admin');
 const { getRandomFace } = require('../../database/data/dialogue');
+const { checkCooldown } = require('./cooldownHandler');
 
 // Command alias registry
 const COMMANDS = {
@@ -20,10 +21,17 @@ const COMMANDS = {
   cash: economy.balance,
   money: economy.balance,
   cowoncy: economy.balance,
+  currency: economy.balance,
+  credit: economy.balance,
+  credits: economy.balance,
   c: economy.balance,
   give: economy.give,
   send: economy.give,
   pay: economy.give,
+  vote: economy.vote,
+  topgg: economy.vote,
+  lottery: economy.lottery,
+  lotto: economy.lottery,
   quest: economy.quest,
   quests: economy.quest,
   cl: economy.quest,
@@ -33,6 +41,11 @@ const COMMANDS = {
   curse: economy.curse,
   cookie: economy.cookie,
   cookies: economy.cookie,
+
+  // Meme & Voting
+  eject: social.eject,
+  weject: social.eject,
+  voteoff: social.eject,
 
   // Zoo
   hunt: zoo.hunt,
@@ -120,10 +133,17 @@ async function handleMessage(message) {
   const content = message.content.trim();
   const lower = content.toLowerCase();
 
-  // Handle standalone 'owo' or 'uwu'
+  // Handle standalone 'owo' or 'uwu' (earns 1-15 passive cowoncy every 15s)
   if (lower === 'owo' || lower === 'uwu') {
+    const cd = checkCooldown(message.author.id, 'owo_passive', 15);
+    let passiveMsg = '';
+    if (!cd) {
+      const earned = Math.floor(Math.random() * 15) + 5;
+      db.addCowoncy(message.author.id, earned);
+      passiveMsg = ` *(+${earned} cowoncy)*`;
+    }
     const faces = ['OwO What\'s this?', 'UwU', '(・`ω´・)', '>w<', 'rawr x3'];
-    return message.reply(faces[Math.floor(Math.random() * faces.length)]);
+    return message.reply(`${faces[Math.floor(Math.random() * faces.length)]}${passiveMsg}`);
   }
 
   const guildPrefix = (message.guild ? db.getGuildPrefix(message.guild.id) : 'owo').trim().toLowerCase();

@@ -1,4 +1,5 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, AttachmentBuilder } = require('discord.js');
+const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const db = require('../../database/db');
 const { getRandomFace, owoify, getActionGif } = require('../../database/data/dialogue');
 
@@ -257,5 +258,108 @@ module.exports = {
     }
     const converted = owoify(input);
     return message.reply(converted);
+  },
+
+  eject: async (message, args) => {
+    let target = null;
+    if (message.mentions?.users) {
+      if (typeof message.mentions.users.first === 'function') {
+        target = message.mentions.users.first();
+      } else if (typeof message.mentions.users.values === 'function') {
+        target = message.mentions.users.values().next().value;
+      }
+    }
+
+    if (!target && args.length > 0) {
+      const cleanTarget = args.join(' ').replace(/^<@!?/, '').replace(/>$/, '').replace(/^@/, '').trim();
+      if (cleanTarget) {
+        if (message.guild?.members?.cache) {
+          const gm = message.guild.members.cache.find(m => 
+            m.user.username.toLowerCase() === cleanTarget.toLowerCase() ||
+            (m.nickname && m.nickname.toLowerCase() === cleanTarget.toLowerCase())
+          );
+          if (gm) target = gm.user;
+        }
+        if (!target) {
+          const dbU = db.db.prepare('SELECT * FROM users WHERE LOWER(username) = LOWER(?) LIMIT 1').get(cleanTarget);
+          if (dbU) {
+            target = { id: dbU.id, username: dbU.username, displayAvatarURL: () => dbU.avatar };
+          } else {
+            target = { username: cleanTarget, displayAvatarURL: () => 'https://cdn.discordapp.com/embed/avatars/0.png' };
+          }
+        }
+      }
+    }
+
+    if (!target) {
+      target = message.author;
+    }
+
+    const targetAvatar = typeof target.displayAvatarURL === 'function'
+      ? target.displayAvatarURL({ extension: 'png', size: 256 })
+      : (target.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png');
+
+    const isImpostor = Math.random() < 0.5;
+
+    try {
+      const width = 640;
+      const height = 360;
+      const canvas = createCanvas(width, height);
+      const ctx = canvas.getContext('2d');
+
+      // 1. Deep space background
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Stars
+      for (let i = 0; i < 70; i++) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const radius = Math.random() < 0.2 ? 2.5 : Math.random() < 0.6 ? 1.5 : 1;
+        const opacity = 0.5 + Math.random() * 0.5;
+        ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 3. User Avatar (tilted 42 degrees, floating on right side of space)
+      try {
+        const img = await loadImage(targetAvatar);
+        ctx.save();
+        const avatarSize = 95;
+        const avatarX = width * 0.78;
+        const avatarY = height * 0.55;
+        ctx.translate(avatarX, avatarY);
+        ctx.rotate(42 * Math.PI / 180);
+        ctx.drawImage(img, -avatarSize / 2, -avatarSize / 2, avatarSize, avatarSize);
+        ctx.restore();
+      } catch (e) {}
+
+      // 4. Centered Ejection text
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '24px "Arial", "Segoe UI", sans-serif';
+
+      const mainText = `${target.username} was ${isImpostor ? 'An Impostor.' : 'not An Impostor.'}`;
+      ctx.fillText(mainText, width / 2, height / 2);
+
+      const subText = isImpostor ? '0 Impostors remain.' : '1 Impostor remains.';
+      ctx.font = '16px "Arial", "Segoe UI", sans-serif';
+      ctx.fillStyle = '#cccccc';
+      ctx.fillText(subText, width / 2, height / 2 + 35);
+
+      const buffer = canvas.toBuffer('image/png');
+      const attachment = new AttachmentBuilder(buffer, { name: 'ejected.png' });
+
+      return message.reply({
+        content: `🚀 | **${message.author.username}** decided to vote off ${target.username}`,
+        files: [attachment]
+      });
+    } catch (err) {
+      console.error('Eject generation error:', err);
+      return message.reply(`🚀 | **${message.author.username}** decided to vote off ${target.username}\n*${target.username} was ${isImpostor ? 'An Impostor.' : 'not An Impostor.'}*`);
+    }
   }
 };

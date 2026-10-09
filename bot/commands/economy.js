@@ -410,5 +410,72 @@ module.exports = {
 
     const count = db.stmts.getItemCount.get(target.id, 'cookie')?.quantity || 1;
     return message.reply(`🍪 | **${message.author.username}** gave a cookie to **${target.username}**! They now have **${count}** cookies! ${getRandomFace()}`);
+  },
+
+  vote: async (message, args, user) => {
+    const cd = checkCooldown(user.id, 'vote', 43200); // 12 hours cooldown
+    if (cd) {
+      const hours = (cd / 3600).toFixed(1);
+      return message.reply(`⏰ You have already voted recently! You can vote again in **${hours} hours**.`);
+    }
+
+    const rewardCowoncy = 2500;
+    db.addCowoncy(user.id, rewardCowoncy);
+    db.addItem(user.id, 'crate_rare', 1);
+
+    const embed = new EmbedBuilder()
+      .setColor('#00e676')
+      .setTitle(`🗳️ Thank you for voting! ${getRandomFace()}`)
+      .setDescription(
+        `**${message.author.username}**, you received your vote reward!\n\n` +
+        `🪙 **+${rewardCowoncy.toLocaleString()} Cowoncy**\n` +
+        `🎁 **+1x Rare Crate**\n\n` +
+        `*You can vote again in 12 hours for more Cowoncy!*`
+      );
+
+    return message.reply({ embeds: [embed] });
+  },
+
+  lottery: async (message, args, user) => {
+    const ticketCost = 100;
+    const count = parseInt(args[0], 10);
+
+    if (args.length === 0 || isNaN(count)) {
+      const jackpot = 500000 + (Math.floor(Date.now() / 60000) % 5000) * 150;
+      const embed = new EmbedBuilder()
+        .setColor('#ffd700')
+        .setTitle(`🎰 OwO Global Lottery ${getRandomFace()}`)
+        .setDescription(
+          `💰 **Current Jackpot:** **${jackpot.toLocaleString()} Cowoncy**!\n` +
+          `🎟️ **Ticket Price:** \`100 Cowoncy\` each\n\n` +
+          `To buy tickets, type: \`owo lottery <amount>\` (e.g. \`owo lottery 5\`)`
+        );
+      return message.reply({ embeds: [embed] });
+    }
+
+    if (count <= 0) {
+      return message.reply(`❌ Please specify a positive number of tickets!`);
+    }
+
+    const totalCost = count * ticketCost;
+    if (user.cowoncy < totalCost) {
+      return message.reply(`❌ You need **${totalCost.toLocaleString()} Cowoncy** for ${count} tickets, but you only have **${user.cowoncy.toLocaleString()}**!`);
+    }
+
+    db.addCowoncy(user.id, -totalCost);
+
+    const winRoll = Math.random();
+    const jackpot = 500000 + (Math.floor(Date.now() / 60000) % 5000) * 150;
+
+    if (winRoll < (0.002 * count)) {
+      db.addCowoncy(user.id, jackpot);
+      return message.reply(`🎉🎊 **JACKPOT WINNER!** **${message.author.username}** won the lottery jackpot of **+${jackpot.toLocaleString()} Cowoncy**! 🏆`);
+    } else if (Math.random() < 0.25) {
+      const smallWin = Math.floor(totalCost * (1.2 + Math.random()));
+      db.addCowoncy(user.id, smallWin);
+      return message.reply(`🎟️ You bought **${count}** lottery tickets and won a prize of **+${smallWin.toLocaleString()} Cowoncy**!`);
+    } else {
+      return message.reply(`🎟️ | **${message.author.username}**, you purchased **${count}** lottery tickets for **${totalCost.toLocaleString()} Cowoncy**! Better luck on the next drawing! ${getRandomFace()}`);
+    }
   }
 };
