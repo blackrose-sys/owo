@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Environment variables & secrets (Never expose Discord Token)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Scratch and debug files
+scratch/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini

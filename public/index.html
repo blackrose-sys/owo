@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OwO Bot & Web App — Ultimate Discord Economy & Zoo Game</title>
+  <meta name="description" content="Experience the iconic OwO Discord Bot and companion web app with accurate hunting, zoo collections, slots, blackjack, and marriage systems.">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="icon" href="https://api.dicebear.com/7.x/bottts/svg?seed=OwO&backgroundColor=2a2254">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <a href="#" class="brand">
+      <div class="brand-avatar">
+        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=OwO&backgroundColor=2a2254" alt="OwO Mascot">
+      </div>
+      <div class="brand-info">
+        <span class="brand-title">
+          (w) OwO <span class="brand-tag">APP</span>
+        </span>
+      </div>
+    </a>
+
+    <ul class="nav-links">
+      <li class="nav-item active" data-tab="play">🎮 Play & Chat</li>
+      <li class="nav-item" data-tab="zoo">🐾 Zoo Compendium</li>
+      <li class="nav-item" data-tab="leaderboard">🏆 Leaderboards</li>
+      <li class="nav-item" data-tab="shop">🛍️ Emporium</li>
+      <li class="nav-item" data-tab="setup">⚙️ Bot Setup & Invite</li>
+    </ul>
+
+    <div class="header-actions">
+      <div class="status-badge">
+        <span id="bot-dot" class="status-dot"></span>
+        <span id="bot-status-text">Checking status...</span>
+      </div>
+      <div class="user-wallet-pill">
+        <span id="wallet-balance">1,000 Cowoncy</span>
+      </div>
+      <button id="btn-open-add-cash" class="btn btn-add-cash" onclick="openAddCashModal()" title="Add or set Cowoncy for any user">
+        <span>💵 Add Cash</span>
+      </button>
+      <button id="sound-toggle" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; border-radius: 20px;">🔊</button>
+    </div>
+  </header>
+
+  <main class="container">
+    
+    <!-- Hero Banner -->
+    <section class="hero-banner">
+      <div class="hero-text">
+        <h1>OwO Bot & Web Companion</h1>
+        <p>The definitive OwO experience. Enjoy 100% authentic animal hunting, gambling, battles, marriage, and zoo management right here or on your Discord servers!</p>
+        <div class="hero-buttons">
+          <button class="btn btn-primary" onclick="runQuickAction('hunt')">🐾 Instant Hunt</button>
+          <button class="btn btn-primary" style="background: linear-gradient(135deg, #ff66b2, #e91e63);" onclick="runQuickAction('daily')">🎁 Claim Daily</button>
+          <button class="btn btn-primary" style="background: linear-gradient(135deg, #ffcc00, #ff9800); color: black;" onclick="runQuickAction('slots', ['100'])">🎰 Spin Slots (100)</button>
+          <a id="invite-link-btn" href="#" target="_blank" class="btn btn-invite" style="display: none;">
+            ➕ Add to Discord Server
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 1: Play & Virtual Discord Lounge -->
+    <section id="tab-play" class="tab-content active">
+      <div class="discord-grid">
+        
+        <!-- Left Side Actions -->
+        <aside class="sidebar-controls">
+          <div>
+            <div class="sidebar-section-title">⚡ Quick Actions</div>
+            <div class="quick-action-list">
+              <button class="action-btn" onclick="runQuickAction('hunt')">
+                <span>🐾 Hunt Animals</span>
+                <span class="tag">15s cd</span>
+              </button>
+              <button class="action-btn" onclick="runQuickAction('daily')">
+                <span>🎁 Claim Daily</span>
+                <span class="tag">Streak</span>
+              </button>
+              <button class="action-btn" onclick="runQuickAction('slots', ['50'])">
+                <span>🎰 Spin Slots (50)</span>
+                <span class="tag">10x Max</span>
+              </button>
+              <button class="action-btn" onclick="runQuickAction('coinflip', ['50', 'heads'])">
+                <span>🪙 Coinflip Heads (50)</span>
+                <span class="tag">2x</span>
+              </button>
+              <button class="action-btn" onclick="executeCommand('whl 50')">
+                <span>🃏 Higher / Lower (50)</span>
+                <span class="tag">whl</span>
+              </button>
+              <button class="action-btn" onclick="openAddCashModal()" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08);">
+                <span>💵 Add Cash (Admin)</span>
+                <span class="tag" style="background: rgba(16, 185, 129, 0.25); color: #34d399; font-weight: 700;">+Cash</span>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class="sidebar-section-title">📖 Command Cheatsheet</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+              <div>• <code>wh</code> (or <code>owo hunt</code>)</div>
+              <div>• <code>whl &lt;bet&gt;</code> (Higher/Lower)</div>
+              <div>• <code>wbj &lt;bet&gt;</code> (Blackjack)</div>
+              <div>• <code>ws &lt;bet&gt;</code> (Slots)</div>
+              <div>• <code>wcf &lt;bet&gt;</code> (Coinflip)</div>
+              <div>• <code>wcash</code> (or <code>wbal</code>)</div>
+              <div>• <code>wdaily</code></div>
+              <div>• <code>wcl</code> (Checklist)</div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Virtual Discord Channel Terminal -->
+        <div class="discord-terminal">
+          <div class="discord-header">
+            <div class="channel-info">
+              <span class="channel-hash">#</span>
+              <span>owo-lounge</span>
+            </div>
+            <span style="font-size: 0.8rem; color: var(--text-dim);">Discord Simulator & Live Feed</span>
+          </div>
+
+          <!-- Chat Scroll Area -->
+          <div id="chat-history" class="chat-history">
+            <!-- Initial Welcome Message -->
+            <div class="message-row">
+              <div class="msg-avatar" style="border: 2px solid var(--accent-purple);">
+                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=OwO&backgroundColor=2a2254" alt="OwO">
+              </div>
+              <div class="msg-body">
+                <div class="msg-meta">
+                  <span class="msg-author" style="color: var(--accent-purple);">(w) OwO</span>
+                  <span class="msg-badge">APP</span>
+                  <span class="msg-time">Today at 12:00</span>
+                </div>
+                <div class="msg-text">
+                  OwO What's this? Welcome to the OwO playground! Try running commands like <code>owo hunt</code>, <code>owo slots 100</code>, or click the quick action buttons on the left!
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input Bar -->
+          <div class="chat-input-bar">
+            <div class="input-container">
+              <input id="chat-input" type="text" placeholder="Message #owo-lounge (e.g. owo hunt, owo slots 100, owo help)..." autocomplete="off">
+              <button id="send-btn" class="send-btn">Send</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Tab 2: Zoo Compendium -->
+    <section id="tab-zoo" class="tab-content">
+      <div class="zoo-controls">
+        <button class="filter-pill active" data-filter="all">All Animals</button>
+        <button class="filter-pill" data-filter="owned">Only Owned</button>
+        <button class="filter-pill" data-filter="common">Common</button>
+        <button class="filter-pill" data-filter="uncommon">Uncommon</button>
+        <button class="filter-pill" data-filter="rare">Rare</button>
+        <button class="filter-pill" data-filter="epic">Epic</button>
+        <button class="filter-pill" data-filter="mythic">Mythic</button>
+        <button class="filter-pill" data-filter="legendary">Legendary</button>
+        <button class="filter-pill" data-filter="fabled">Fabled</button>
+        <button class="filter-pill" data-filter="gem">Gem / Special</button>
+      </div>
+      <div id="zoo-grid" class="zoo-cards-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- Tab 3: Leaderboards -->
+    <section id="tab-leaderboard" class="tab-content">
+      <div class="lb-grid">
+        <div class="lb-card">
+          <div class="lb-title">🪙 Cowoncy Billionaires</div>
+          <div id="lb-cowoncy-list" class="lb-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+        <div class="lb-card">
+          <div class="lb-title">🌲 Master Hunters</div>
+          <div id="lb-hunts-list" class="lb-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 4: Shop -->
+    <section id="tab-shop" class="tab-content">
+      <div style="margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.5rem; margin-bottom: 0.35rem;">🛍️ OwO Emporium</h2>
+        <p style="color: var(--text-muted);">Spend your Cowoncy on powerups, mystery crates, and marriage rings!</p>
+      </div>
+      <div id="shop-grid" style="display: flex; flex-direction: column; gap: 1rem;">
+        <!-- Dynamically populated -->
+      </div>
+    </section>
+
+    <!-- Tab 5: Bot Setup & Invite -->
+    <section id="tab-setup" class="tab-content">
+      <div class="setup-card">
+        <h2>🤖 Connect & Add Bot to Your Discord Server</h2>
+        <p style="color: var(--text-muted);">Follow these 3 quick steps to have your own 24/7 OwO bot running in any Discord server:</p>
+        
+        <ol class="setup-steps">
+          <li>
+            Go to the <a href="https://discord.com/developers/applications" target="_blank" style="color: var(--accent-cyan); font-weight: 700;">Discord Developer Portal</a> and click <strong>New Application</strong>.
+          </li>
+          <li>
+            In the left sidebar, click <strong>Bot</strong>, then:
+            <ul style="margin: 0.5rem 0 0.5rem 1.5rem;">
+              <li>Click <strong>Reset Token</strong> (copy your Bot Token).</li>
+              <li>Scroll down to <strong>Privileged Gateway Intents</strong> and enable <strong>Message Content Intent</strong>, <strong>Server Members Intent</strong>, and <strong>Presence Intent</strong>.</li>
+            </ul>
+          </li>
+          <li>
+            Paste your Bot Token below and click <strong>Connect Bot</strong>:
+          </li>
+        </ol>
+
+        <div class="token-form">
+          <input id="bot-token-input" type="password" class="token-input" placeholder="Paste your Discord Bot Token here...">
+          <button id="connect-bot-btn" class="btn btn-primary" onclick="connectDiscordBot()">Connect Bot</button>
+        </div>
+      </div>
+
+      <div class="setup-card">
+        <h2>🚀 1-Click Server Invite Link Generator</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">
+          Once your bot is connected, click the button below to add it directly to your servers with pre-configured permissions:
+        </p>
+        <button class="btn btn-invite" onclick="window.open(state.botStatus?.inviteUrl || 'https://discord.com/developers/applications', '_blank')">
+          ➕ Authorize Bot into Discord Server
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Add Cash / Admin Economy Modal -->
+  <div id="modal-add-cash" class="modal-backdrop" style="display: none;">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge">💵</div>
+          <div>
+            <h3 class="modal-title">Cowoncy Cash Injector</h3>
+            <p class="modal-subtitle">Add or set Cowoncy for any Discord player or web account</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeAddCashModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Target User Selection -->
+        <div class="form-group">
+          <label class="form-label" for="cash-user-select">
+            👤 Select Recipient (Who receives cash?)
+          </label>
+          <select id="cash-user-select" class="form-control form-select" onchange="onTargetUserChanged()">
+            <option value="" disabled>Loading users...</option>
+          </select>
+        </div>
+
+        <!-- Custom User ID Input (shown when Custom User ID is selected) -->
+        <div id="custom-user-group" class="form-group" style="display: none;">
+          <label class="form-label" for="cash-custom-id">
+            🆔 Custom Discord User ID
+          </label>
+          <input type="text" id="cash-custom-id" class="form-control" placeholder="e.g. 370485038879604738" oninput="onCustomIdInput()" />
+          <span class="form-hint">Paste any Discord User ID (creates profile automatically if new)</span>
+        </div>
+
+        <!-- Target User Preview Card -->
+        <div id="target-user-card" class="target-user-card">
+          <div class="target-avatar" id="target-user-avatar">🐶</div>
+          <div class="target-details">
+            <div class="target-name" id="target-user-name">Loading user...</div>
+            <div class="target-id" id="target-user-id">ID: —</div>
+          </div>
+          <div class="target-balance-wrap">
+            <span class="target-balance-label">Current Balance</span>
+            <span class="target-balance-val" id="target-user-bal">— Cowoncy</span>
+          </div>
+        </div>
+
+        <!-- Operation Mode: Add vs Set -->
+        <div class="form-group">
+          <label class="form-label">⚙️ Operation Mode</label>
+          <div class="mode-toggle-group">
+            <button type="button" class="mode-btn active" id="btn-mode-add" onclick="setCashMode('add')">
+              <span class="mode-icon">➕</span>
+              <span class="mode-text">Add to Balance</span>
+            </button>
+            <button type="button" class="mode-btn" id="btn-mode-set" onclick="setCashMode('set')">
+              <span class="mode-icon">🎯</span>
+              <span class="mode-text">Set Exact Balance</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Amount Input -->
+        <div class="form-group">
+          <label class="form-label" for="cash-amount-input">
+            💰 Cowoncy Amount
+          </label>
+          <div class="input-with-currency">
+            <span class="currency-symbol">🪙</span>
+            <input type="number" id="cash-amount-input" class="form-control input-amount" placeholder="Enter amount..." min="0" value="1000000" />
+          </div>
+        </div>
+
+        <!-- Quick Preset Chips -->
+        <div class="form-group">
+          <label class="form-label">⚡ Quick Presets</label>
+          <div class="preset-chips-grid">
+            <button type="button" class="preset-chip" onclick="setPresetAmount(50000)">+50k</button>
+            <button type="button" class="preset-chip" onclick="setPresetAmount(100000)">+100k</button>
+            <button type="button" class="preset-chip" onclick="setPresetAmount(250000)">+250k</button>
+            <button type="button" class="preset-chip" onclick="setPresetAmount(1000000)">+1M</button>
+            <button type="button" class="preset-chip" onclick="setPresetAmount(5000000)">+5M</button>
+            <button type="button" class="preset-chip" onclick="setPresetAmount(10000000)">+10M</button>
+            <button type="button" class="preset-chip" onclick="setPresetAmount(100000000)">+100M</button>
+            <button type="button" class="preset-chip" onclick="setPresetAmount(1000000000000)">+1 Trillion</button>
+          </div>
+        </div>
+
+        <!-- Feedback Alert inside Modal -->
+        <div id="cash-modal-status" class="modal-status-alert" style="display: none;"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeAddCashModal()">Cancel</button>
+        <button type="button" id="btn-confirm-give-cash" class="btn btn-give-cash" onclick="submitAddCash()">
+          <span>✨ Inject Cash</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
