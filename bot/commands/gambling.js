@@ -377,7 +377,7 @@ module.exports = {
       `${authorName} [${playerVal}]`,
       playerInitialCards,
       '🎲 ~ game in progress',
-      0x3498db
+      0x00ff00
     );
 
     const replyMsg = await message.reply({ embeds: [initialEmbed] });
@@ -478,7 +478,7 @@ module.exports = {
             `${authorName} [${playerVal}]`,
             formatHand(playerHand, false, message.client),
             '🎲 ~ game in progress',
-            0x3498db
+            0x00ff00
           );
 
           await replyMsg.edit({ embeds: [updatedEmbed] }).catch(() => {});
@@ -570,7 +570,7 @@ module.exports = {
       const icon = isDone ? (currentCashOut > 0 ? '👍' : '👎') : '🎰';
 
       const embed = new EmbedBuilder()
-        .setColor(isDone ? (currentCashOut > 0 ? '#4caf50' : '#e53935') : '#8a7ff8')
+        .setColor(isDone ? (currentCashOut > 0 ? '#00ff00' : '#e53935') : '#00ff00')
         .setDescription(
           `${icon} **@${message.author.username} ${statusTitle}**\n` +
           `**Bet:** \`${bet.toLocaleString()}\`  **Streak:** \`${streak}\`  **Cash Out:** \`${currentCashOut.toLocaleString()}\` \`(${multStr}x)\`\n\n` +
