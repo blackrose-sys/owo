@@ -9,13 +9,27 @@ const defaultDbPath = path.join(__dirname, 'owo.sqlite');
 let dbPath;
 if (process.env.DATABASE_PATH) {
   dbPath = process.env.DATABASE_PATH;
-} else if (process.env.RAILWAY_VOLUME_MOUNT_PATH) {
-  dbPath = path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'owo.sqlite');
-} else if (fs.existsSync('/data')) {
-  dbPath = '/data/owo.sqlite';
 } else {
-  dbPath = defaultDbPath;
+  // Check any Railway volume environment variable (e.g. RAILWAY_VOLUME_MOUNT_PATH, OWO_VOLUME_MOUNT_PATH, etc.)
+  const volumeEnvKey = Object.keys(process.env).find(k => 
+    k.toUpperCase().includes('VOLUME') && (k.toUpperCase().includes('MOUNT') || k.toUpperCase().includes('PATH'))
+  );
+  const volumeMountPath = volumeEnvKey ? process.env[volumeEnvKey] : null;
+
+  if (volumeMountPath) {
+    dbPath = path.join(volumeMountPath, 'owo.sqlite');
+  } else if (fs.existsSync('/data')) {
+    dbPath = '/data/owo.sqlite';
+  } else if (fs.existsSync('/app/data')) {
+    dbPath = '/app/data/owo.sqlite';
+  } else if (fs.existsSync('/owo-volume')) {
+    dbPath = '/owo-volume/owo.sqlite';
+  } else {
+    dbPath = defaultDbPath;
+  }
 }
+
+console.log(`[DB Initialization] Active database path: ${dbPath}`);
 
 // Ensure directory exists
 const dbDir = path.dirname(dbPath);
