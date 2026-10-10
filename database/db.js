@@ -3,12 +3,51 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const dbPath = path.join(__dirname, 'owo.sqlite');
+// Database location with persistent volume support (prevents data resets on Railway/host redeploy)
+const defaultDbPath = path.join(__dirname, 'owo.sqlite');
+
+let dbPath;
+if (process.env.DATABASE_PATH) {
+  dbPath = process.env.DATABASE_PATH;
+} else if (process.env.RAILWAY_VOLUME_MOUNT_PATH) {
+  dbPath = path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'owo.sqlite');
+} else if (fs.existsSync('/data')) {
+  dbPath = '/data/owo.sqlite';
+} else {
+  dbPath = defaultDbPath;
+}
+
+// Ensure directory exists
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  try { fs.mkdirSync(dbDir, { recursive: true }); } catch (e) {}
+}
+
+// If using persistent volume path and target does not exist yet, copy existing database over
+if (dbPath !== defaultDbPath && !fs.existsSync(dbPath) && fs.existsSync(defaultDbPath)) {
+  try {
+    fs.copyFileSync(defaultDbPath, dbPath);
+    console.log(`[DB] Preserved and seeded existing database into persistent volume: ${dbPath}`);
+  } catch (err) {
+    console.error(`[DB] Error seeding persistent volume:`, err);
+  }
+}
+
 const db = new Database(dbPath);
 
 // Enable WAL mode for high performance concurrent reads and writes
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+
+// Periodic automatic database backup every 30 minutes to prevent data loss
+setInterval(() => {
+  try {
+    const backupPath = dbPath + '.bak';
+    db.backup(backupPath)
+      .then(() => {})
+      .catch((err) => console.error('[DB Backup Error]:', err));
+  } catch (e) {}
+}, 30 * 60 * 1000).unref();
 
 // Initialize database tables
 db.exec(`
@@ -105,9 +144,11 @@ db.exec(`
 `);
 
 // Safe migrations for newly added columns
+try { db.exec(`ALTER TABLE users ADD COLUMN active_team INTEGER DEFAULT 1;`); } catch (e) {}
 try { db.exec(`ALTER TABLE weapons ADD COLUMN code TEXT;`); } catch (e) {}
 try { db.exec(`ALTER TABLE weapons ADD COLUMN quality REAL DEFAULT 50.0;`); } catch (e) {}
 try { db.exec(`ALTER TABLE weapons ADD COLUMN tier TEXT DEFAULT 'common';`); } catch (e) {}
+try { db.exec(`ALTER TABLE weapons ADD COLUMN equipped_to TEXT DEFAULT NULL;`); } catch (e) {}
 
 // Prepared statements for maximum performance
 const stmts = {
@@ -176,6 +217,8 @@ const stmts = {
 
   // Team
   getTeam: db.prepare('SELECT * FROM team WHERE user_id = ? ORDER BY slot ASC'),
+  getTeamByPage: db.prepare('SELECT * FROM team WHERE user_id = ? AND slot BETWEEN ? AND ? ORDER BY slot ASC'),
+  setActiveTeam: db.prepare('UPDATE users SET active_team = ? WHERE id = ?'),
   setTeamSlot: db.prepare(`
     INSERT INTO team (user_id, slot, animal_id, level, xp)
     VALUES (?, ?, ?, 1, 0)

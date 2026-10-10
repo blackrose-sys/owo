@@ -5,13 +5,13 @@
  */
 const { createCanvas } = require('@napi-rs/canvas');
 
-// Card dimensions (each card)
-const CARD_W = 80;
-const CARD_H = 112;
-const CARD_RADIUS = 8;
-const CARD_GAP = 12;
-const PADDING = 16;
-const ARROW_W = 30;
+// Card dimensions (each card) - Bigger & bolder matching original OwO high clarity
+const CARD_W = 96;
+const CARD_H = 136;
+const CARD_RADIUS = 10;
+const CARD_GAP = 16;
+const PADDING = 18;
+const ARROW_W = 34;
 
 // Suit symbols and colors
 const SUIT_DATA = {
@@ -60,30 +60,30 @@ function drawCard(ctx, x, y, value, suit) {
 
   // Top-left value
   ctx.fillStyle = sd.color;
-  ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
+  ctx.font = 'bold 26px "Segoe UI", Arial, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.fillText(value, x + 6, y + 4);
+  ctx.fillText(value, x + 8, y + 6);
 
   // Top-left suit (smaller)
-  ctx.font = '16px "Segoe UI Symbol", Arial, sans-serif';
-  ctx.fillText(sd.symbol, x + 7, y + 26);
+  ctx.font = '20px "Segoe UI Symbol", Arial, sans-serif';
+  ctx.fillText(sd.symbol, x + 9, y + 34);
 
   // Center suit (large)
-  ctx.font = '36px "Segoe UI Symbol", Arial, sans-serif';
+  ctx.font = '46px "Segoe UI Symbol", Arial, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(sd.symbol, x + CARD_W / 2, y + CARD_H / 2 + 4);
 
-  // Bottom-right value (upside down effect - just placed in bottom right)
-  ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
+  // Bottom-right value
+  ctx.font = 'bold 26px "Segoe UI", Arial, sans-serif';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'bottom';
-  ctx.fillText(value, x + CARD_W - 6, y + CARD_H - 4);
+  ctx.fillText(value, x + CARD_W - 8, y + CARD_H - 6);
 
   // Bottom-right suit
-  ctx.font = '16px "Segoe UI Symbol", Arial, sans-serif';
-  ctx.fillText(sd.symbol, x + CARD_W - 7, y + CARD_H - 26);
+  ctx.font = '20px "Segoe UI Symbol", Arial, sans-serif';
+  ctx.fillText(sd.symbol, x + CARD_W - 9, y + CARD_H - 34);
 }
 
 /**
@@ -177,13 +177,17 @@ function renderHlCards(cards) {
     curX += CARD_W;
 
     if (i < numCards - 1) {
-      // Draw arrow between cards
+      // Draw smooth vector arrow triangle between cards
       curX += CARD_GAP;
+      const arrowCx = curX + ARROW_W / 2;
+      const arrowCy = PADDING + CARD_H / 2;
+      ctx.beginPath();
+      ctx.moveTo(arrowCx - 7, arrowCy - 11);
+      ctx.lineTo(arrowCx + 9, arrowCy);
+      ctx.lineTo(arrowCx - 7, arrowCy + 11);
+      ctx.closePath();
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('▶', curX + ARROW_W / 2, PADDING + CARD_H / 2);
+      ctx.fill();
       curX += ARROW_W + CARD_GAP;
     }
   }

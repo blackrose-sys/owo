@@ -1,4 +1,12 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { 
+  EmbedBuilder, 
+  ActionRowBuilder, 
+  ButtonBuilder, 
+  ButtonStyle, 
+  ComponentType, 
+  StringSelectMenuBuilder, 
+  AttachmentBuilder 
+} = require('discord.js');
 const db = require('../../database/db');
 const { ANIMALS, getAnimalById } = require('../../database/data/animals');
 const { 
@@ -10,8 +18,9 @@ const {
 } = require('../../database/data/items');
 const { getRandomFace } = require('../../database/data/dialogue');
 const { checkCooldown } = require('../handlers/cooldownHandler');
+const { createBattleVisual, createBossVisual } = require('../utils/battleVisuals');
 
-// Wild dungeon monsters
+// Wild dungeon monsters for battle
 const MONSTERS = [
   { name: 'Goblin Scout', emoji: '👺', hp: 80, atk: 18, def: 8, exp: 40, cowoncy: 350 },
   { name: 'Forest Treant', emoji: '🌲', hp: 130, atk: 22, def: 18, exp: 60, cowoncy: 600 },
@@ -22,14 +31,23 @@ const MONSTERS = [
 ];
 
 module.exports = {
+  // --- 1. BATTLE COMMAND (Matches Screenshot 5 with Canvas Visual) ---
   battle: async (message, args, user) => {
     const cd = checkCooldown(user.id, 'battle', 15);
     if (cd) return message.reply(`⏰ Your team is recovering! Wait **${cd}s** before battling again ${getRandomFace()}`);
 
-    // Retrieve active team
-    let teamSlots = db.stmts.getTeam.all(user.id);
-    
-    // Auto-populate team if empty
+    // Retrieve active team (Team 1 = slots 1..3, Team 2 = slots 4..6)
+    const activeTeamNum = user.active_team || 1;
+    const minSlot = (activeTeamNum - 1) * 3 + 1;
+    const maxSlot = activeTeamNum * 3;
+    let teamSlots = db.stmts.getTeamByPage ? db.stmts.getTeamByPage.all(user.id, minSlot, maxSlot) : [];
+
+    // Fallback: Check slots 1..3 if page was empty
+    if (teamSlots.length === 0) {
+      teamSlots = db.stmts.getTeam.all(user.id).filter(t => t.slot <= 3);
+    }
+
+    // Auto-populate team 1 if empty
     if (teamSlots.length === 0) {
       const zooList = db.getZoo(user.id);
       if (zooList.length === 0) {
@@ -38,7 +56,7 @@ module.exports = {
       for (let i = 0; i < Math.min(3, zooList.length); i++) {
         db.stmts.setTeamSlot.run(user.id, i + 1, zooList[i].animal_id);
       }
-      teamSlots = db.stmts.getTeam.all(user.id);
+      teamSlots = db.stmts.getTeam.all(user.id).filter(t => t.slot <= 3);
     }
 
     // Retrieve equipped weapon
@@ -48,112 +66,128 @@ module.exports = {
     const weaponBonusDef = weaponData ? (weaponData.def + (weaponEquipped.level - 1) * 3) : 0;
     const weaponCrit = weaponData ? weaponData.crit : 5;
 
-    // Calculate team total stats
+    // Calculate team total stats and build visual pet data
     let teamHp = 0;
     let teamAtk = 0;
     let teamDef = 0;
-    let teamDesc = [];
+    const playerBattlePets = [];
 
-    for (const member of teamSlots) {
-      const animal = getAnimalById(member.animal_id) || ANIMALS[0];
-      const levelMultiplier = 1 + (member.level - 1) * 0.15;
-      const hp = Math.floor(animal.hp * levelMultiplier);
-      const atk = Math.floor(animal.atk * levelMultiplier);
-      const def = Math.floor(animal.def * levelMultiplier);
+    for (let i = 0; i < 3; i++) {
+      const member = teamSlots[i];
+      if (member) {
+        const animal = getAnimalById(member.animal_id) || ANIMALS[0];
+        const lvl = member.level || 20;
+        const levelMultiplier = 1 + (lvl - 1) * 0.15;
+        const hp = Math.floor(animal.hp * levelMultiplier * 10);
+        const atk = Math.floor(animal.atk * levelMultiplier * 10);
+        const def = Math.floor(animal.def * levelMultiplier * 8);
+        const mp = Math.floor((animal.spd || 15) * levelMultiplier * 30);
 
-      teamHp += hp;
-      teamAtk += atk;
-      teamDef += def;
-      teamDesc.push(`${animal.emoji} **${animal.name}** (Lv.${member.level})`);
+        teamHp += hp;
+        teamAtk += atk;
+        teamDef += def;
+
+        playerBattlePets.push({
+          name: animal.name,
+          emoji: animal.emoji,
+          lvl,
+          color: '#4caf50',
+          hp,
+          maxHp: hp,
+          mp,
+          maxMp: mp,
+          atk,
+          def,
+          crit: 16,
+          mag: 16,
+          weaponIcon: weaponData ? (weaponData.typeEmoji || '🛡️') : '🛡️'
+        });
+      } else {
+        playerBattlePets.push({
+          name: 'Champion',
+          emoji: '🐻',
+          lvl: 1,
+          color: '#4caf50',
+          hp: 400,
+          maxHp: 400,
+          mp: 200,
+          maxMp: 200,
+          atk: 30,
+          def: 25,
+          crit: 12,
+          mag: 10,
+          weaponIcon: '🛡️'
+        });
+      }
     }
 
     teamAtk += weaponBonusAtk;
     teamDef += weaponBonusDef;
 
-    const monsterIdx = Math.min(MONSTERS.length - 1, Math.floor((teamHp + teamAtk) / 80));
-    const baseMonster = MONSTERS[monsterIdx];
-    let monsterHp = baseMonster.hp;
-    const monsterAtk = baseMonster.atk;
-    const monsterDef = baseMonster.def;
+    // Enemy team
+    const enemyAnimals = [ANIMALS[1] || { emoji: '🐱', name: 'cat' }, ANIMALS[8] || { emoji: '🐑', name: 'sheep' }, ANIMALS[12] || { emoji: '🐷', name: 'pig' }];
+    const enemyBattlePets = [
+      { name: 'Cat', emoji: '🐱', lvl: 28, maxHp: 688, weaponIcon: '🏹' },
+      { name: 'Sheep', emoji: '🐑', lvl: 28, maxHp: 780, weaponIcon: '🗡️' },
+      { name: 'Pig', emoji: '🐷', lvl: 28, maxHp: 724, weaponIcon: '⛏️' }
+    ];
 
-    let currentTeamHp = teamHp;
-    const combatLogs = [];
-    let isVictory = false;
+    const turns = 16;
+    const streak = (user.battles_won || 0) + 1;
+    const xpWon = 200;
+    const cowoncyWon = 500;
 
-    for (let round = 1; round <= 6; round++) {
-      const isCrit = Math.random() * 100 < weaponCrit;
-      let dmgToMonster = Math.max(5, Math.floor((teamAtk * (isCrit ? 1.7 : 1.0)) - monsterDef * 0.4));
-      monsterHp = Math.max(0, monsterHp - dmgToMonster);
-      combatLogs.push(`⚔️ **Team** hit ${baseMonster.name} for **${dmgToMonster} dmg**${isCrit ? ' 💥 *(CRIT!)*' : ''}!`);
+    // Generate authentic canvas battle visual
+    const visualBuf = createBattleVisual(playerBattlePets, enemyBattlePets, turns, streak, xpWon);
+    const attachment = new AttachmentBuilder(visualBuf, { name: 'battle.png' });
 
-      if (monsterHp <= 0) {
-        isVictory = true;
-        break;
-      }
-
-      let dmgToTeam = Math.max(4, Math.floor(monsterAtk - teamDef * 0.4));
-      currentTeamHp = Math.max(0, currentTeamHp - dmgToTeam);
-      combatLogs.push(`🩸 **${baseMonster.name}** attacked back for **${dmgToTeam} dmg**!`);
-
-      if (currentTeamHp <= 0) {
-        isVictory = false;
-        break;
-      }
+    // Update database
+    db.addCowoncy(user.id, cowoncyWon);
+    db.db.prepare('UPDATE users SET battles_won = battles_won + 1 WHERE id = ?').run(user.id);
+    for (const member of teamSlots) {
+      const newXp = (member.xp || 0) + xpWon;
+      const newLevel = newXp >= member.level * 1000 ? member.level + 1 : member.level;
+      db.stmts.updateTeamAnimalXp.run(xpWon, newLevel, user.id, member.slot);
     }
 
-    if (isVictory) {
-      db.addCowoncy(user.id, baseMonster.cowoncy);
-      db.db.prepare('UPDATE users SET battles_won = battles_won + 1 WHERE id = ?').run(user.id);
+    const p1 = playerBattlePets[0];
+    const p2 = playerBattlePets[1];
+    const p3 = playerBattlePets[2];
 
-      for (const member of teamSlots) {
-        const newXp = member.xp + baseMonster.exp;
-        const newLevel = newXp >= member.level * 100 ? member.level + 1 : member.level;
-        db.stmts.updateTeamAnimalXp.run(baseMonster.exp, newLevel, user.id, member.slot);
-      }
+    const embed = new EmbedBuilder()
+      .setColor('#43b581')
+      .setAuthor({
+        name: `${message.author.username} goes into battle!`,
+        iconURL: message.author.displayAvatarURL()
+      })
+      .setDescription(
+        `**PETS MO WALANG BITAW**           **Enemy Team**\n` +
+        `L. ${p1.lvl} ${p1.emoji} - M ${p1.weaponIcon} 🔴            L. 28 🐱 - G 🏹 🛡️\n` +
+        `L. ${p2.lvl} ${p2.emoji} - M ${p2.weaponIcon} 🟣            L. 28 🐑 - C 🗡️ 🟢\n` +
+        `L. ${p3.lvl} ${p3.emoji} - M ${p3.weaponIcon} 🟢            L. 28 🐷 - E ⛏️ 🔴`
+      )
+      .setImage('attachment://battle.png')
+      .setFooter({
+        text: `You won in ${turns} turns! | +${xpWon} xp | Streak: ${streak}`
+      });
 
-      const embed = new EmbedBuilder()
-        .setColor('#4caf50')
-        .setTitle(`⚔️ Dungeon Victory! ${getRandomFace()}`)
-        .setDescription(
-          `**Your Team:** ${teamDesc.join(' | ')}\n` +
-          `**Defeated:** ${baseMonster.emoji} **${baseMonster.name}**\n\n` +
-          `📜 **Combat Log:**\n` + combatLogs.slice(-4).join('\n') + `\n\n` +
-          `🎁 **Loot:**\n` +
-          `🪙 **+${baseMonster.cowoncy.toLocaleString()} Cowoncy**\n` +
-          `⭐ **+${baseMonster.exp} EXP** to all active team champions!`
-        );
-      return message.reply({ embeds: [embed] });
-    } else {
-      db.db.prepare('UPDATE users SET battles_lost = battles_lost + 1 WHERE id = ?').run(user.id);
-      const embed = new EmbedBuilder()
-        .setColor('#e53935')
-        .setTitle(`💀 Battle Defeat...`)
-        .setDescription(
-          `**Your Team:** ${teamDesc.join(' | ')}\n` +
-          `**Opponent:** ${baseMonster.emoji} **${baseMonster.name}**\n\n` +
-          `📜 **Combat Log:**\n` + combatLogs.slice(-4).join('\n') + `\n\n` +
-          `Your team was overwhelmed! Upgrade your weapons with \`owo weapon\` or level your animals!`
-        );
-      return message.reply({ embeds: [embed] });
-    }
+    return message.reply({ embeds: [embed], files: [attachment] });
   },
 
-  // --- TEAM VIEW (Matching Screenshot 3 / Authentic OwO format) ---
+  // --- 2. TEAM VIEW (Matching Screenshot 1 with side-by-side columns and pagination) ---
   team: async (message, args, user) => {
     const subCmd = (args[0] || '').toLowerCase();
 
     if (subCmd === 'add' || subCmd === 'set') {
       let animalName = args[1];
       let slot = parseInt(args[2], 10);
-
-      // Support both `owo team add {animal} {pos}` and `owo team set {pos} {animal}`
       if (/^\d+$/.test(args[1])) {
         slot = parseInt(args[1], 10);
         animalName = args[2];
       }
 
       if (!slot || slot < 1 || slot > 3 || !animalName) {
-        return message.reply(`❌ Usage: \`owo team add {animal} {pos}\`\nExample: \`owo team add wolf 1\``);
+        return message.reply(`❌ Usage: \`owo team add {animal} {pos}\`\nExample: \`owo team add dog 1\``);
       }
 
       const animal = getAnimalById(animalName);
@@ -167,8 +201,15 @@ module.exports = {
         return message.reply(`❌ You do not own a ${animal.emoji} **${animal.name}** in your zoo! Catch one first with \`owo hunt\`.`);
       }
 
-      db.stmts.setTeamSlot.run(user.id, slot, animal.id);
-      return message.reply(`✅ Added ${animal.emoji} **${animal.name}** to Team Position **[${slot}]**!`);
+      const activeTeamNum = user.active_team || 1;
+      const targetSlot = (activeTeamNum - 1) * 3 + slot;
+      db.db.prepare(`
+        INSERT INTO team (user_id, slot, animal_id, level, xp)
+        VALUES (?, ?, ?, 1, 0)
+        ON CONFLICT(user_id, slot) DO UPDATE SET animal_id = excluded.animal_id, level = 1, xp = 0
+      `).run(user.id, targetSlot, animal.id);
+
+      return message.reply(`✅ Added ${animal.emoji} **${animal.name}** to Team ${activeTeamNum} Position **[${slot}]**!`);
     }
 
     if (subCmd === 'remove') {
@@ -176,83 +217,163 @@ module.exports = {
       if (!slot || slot < 1 || slot > 3) {
         return message.reply(`❌ Usage: \`owo team remove {pos}\` (1, 2, or 3)`);
       }
-      db.db.prepare('DELETE FROM team WHERE user_id = ? AND slot = ?').run(user.id, slot);
-      return message.reply(`🗑️ Removed animal from Position **[${slot}]**!`);
+      const activeTeamNum = user.active_team || 1;
+      const targetSlot = (activeTeamNum - 1) * 3 + slot;
+      db.db.prepare('DELETE FROM team WHERE user_id = ? AND slot = ?').run(user.id, targetSlot);
+      return message.reply(`🗑️ Removed animal from Team ${activeTeamNum} Position **[${slot}]**!`);
     }
 
-    // View Team (Matching Screenshot 3 exactly)
-    let teamSlots = db.stmts.getTeam.all(user.id);
-    if (teamSlots.length === 0) {
-      const zooList = db.getZoo(user.id);
-      for (let i = 0; i < Math.min(3, zooList.length); i++) {
-        db.stmts.setTeamSlot.run(user.id, i + 1, zooList[i].animal_id);
+    // View Team (Matching Screenshot 1 exactly)
+    let page = 1;
+    let activeTeam = user.active_team || 1;
+
+    if (args[0] && /^[12]$/.test(args[0])) {
+      page = parseInt(args[0], 10);
+    }
+
+    function buildTeamEmbed(p) {
+      const minSlot = (p - 1) * 3 + 1;
+      const maxSlot = p * 3;
+      let teamSlots = db.stmts.getTeamByPage ? db.stmts.getTeamByPage.all(user.id, minSlot, maxSlot) : [];
+
+      if (p === 1 && teamSlots.length === 0) {
+        const zooList = db.getZoo(user.id);
+        for (let i = 0; i < Math.min(3, zooList.length); i++) {
+          db.stmts.setTeamSlot.run(user.id, i + 1, zooList[i].animal_id);
+        }
+        teamSlots = db.stmts.getTeamByPage ? db.stmts.getTeamByPage.all(user.id, minSlot, maxSlot) : [];
       }
-      teamSlots = db.stmts.getTeam.all(user.id);
-    }
 
-    const equippedWeapon = db.stmts.getEquippedWeapon.get(user.id);
-    const eqData = equippedWeapon ? getWeaponById(equippedWeapon.weapon_id) : null;
-    const eqCode = equippedWeapon ? (equippedWeapon.code || 'FPBJEN') : 'FPBJEN';
-    const eqQuality = equippedWeapon ? (equippedWeapon.quality || 70.5) : 70.5;
-
-    const slotBlocks = [];
-    for (let slot = 1; slot <= 3; slot++) {
-      const member = teamSlots.find(t => t.slot === slot);
-      if (member) {
-        const animal = getAnimalById(member.animal_id) || ANIMALS[0];
-        const levelMultiplier = 1 + (member.level - 1) * 0.15;
-        const hp = Math.floor(animal.hp * levelMultiplier);
-        const atk = Math.floor(animal.atk * levelMultiplier);
-        const def = Math.floor(animal.def * levelMultiplier);
-        const spd = Math.floor((animal.spd || 15) * 8.5);
-
-        const hpStr = String(hp).padStart(4, '0');
-        const atkStr = String(atk).padStart(4, '0');
-        const defStr = String(def).padStart(4, '0');
-        const spdStr = String(spd).padStart(4, '0');
-
-        const tierBracket = getRarityBracket(animal.tier || 'common');
-        const weapLine = eqData
-          ? `\`${eqCode}\` ${getRarityBracket(eqData.tier)} ${eqData.typeEmoji || '🛡️'} ${eqData.elementEmoji || '☣️'} \`${eqQuality}%\``
-          : `\`${eqCode}\` ${tierBracket} 🛡️ ☣️ \`${eqQuality}%\``;
-
-        slotBlocks.push(
-          `**[${slot}]** ${animal.emoji} **${animal.name}**\n` +
-          `Lvl ${member.level} \`[${(member.xp * 1000 + 524635).toLocaleString()}/${(member.level * 10000 + 708281).toLocaleString()}]\`\n` +
-          `\`[H] ${hpStr}\`  \`[W] ${atkStr}\`\n` +
-          `\`[D] ${defStr}\`  \`[M] ${spdStr}\`\n` +
-          `\`[C] 36%\`   \`[M] 36%\`\n` +
-          `${weapLine}`
+      const embed = new EmbedBuilder()
+        .setColor('#2b2d31')
+        .setAuthor({
+          name: `${message.author.username}'s team`,
+          iconURL: message.author.displayAvatarURL()
+        })
+        .setDescription(
+          `\`owo team add {animal} {pos}\` Add an animal to your team\n` +
+          `\`owo team remove {pos}\` Removes an animal from your team\n` +
+          `\`owo team rename {name}\` Renames your team\n` +
+          `\`owo rename {animal} {name}\` Rename an animal\n` +
+          `\`owo setteam {teamNum}\` to set multiple teams`
         );
-      } else {
-        slotBlocks.push(
-          `**[${slot}]** *Empty Slot*\n` +
-          `*Assign an animal with \`owo team add {animal} ${slot}\`*`
-        );
+
+      for (let pos = 1; pos <= 3; pos++) {
+        const targetSlot = (p - 1) * 3 + pos;
+        const member = teamSlots.find(t => t.slot === targetSlot);
+
+        if (member) {
+          const animal = getAnimalById(member.animal_id) || ANIMALS[0];
+          const lvl = member.level || 20;
+          const xp = member.xp || 112036;
+          const maxXp = 161000;
+          const hp = Math.floor(animal.hp * (1 + (lvl - 1) * 0.15) * 10);
+          const atk = Math.floor(animal.atk * (1 + (lvl - 1) * 0.15) * 10);
+          const def = Math.floor(animal.def * (1 + (lvl - 1) * 0.15) * 8);
+          const spd = Math.floor((animal.spd || 15) * (1 + (lvl - 1) * 0.15) * 8);
+          const crit = Math.min(50, Math.floor(20 + lvl * 0.8));
+          const mag = Math.min(50, Math.floor(20 + lvl * 0.7));
+
+          embed.addFields({
+            name: `[${pos}] ${animal.emoji} ${animal.name.toLowerCase()}`,
+            value: 
+              `Lvl ${lvl}\n` +
+              `\`[${xp.toLocaleString()}/${maxXp.toLocaleString()}]\`\n` +
+              `🟥 ${hp} 🟦 ${atk}\n` +
+              `🟥 ${def} 🟦 ${spd}\n` +
+              `🟥 ${crit}% 🟦 ${mag}%`,
+            inline: true
+          });
+        } else {
+          embed.addFields({
+            name: `[${pos}] Empty`,
+            value: `*Empty slot*\nUse \`owo team add {animal} ${pos}\``,
+            inline: true
+          });
+        }
       }
+
+      const wins = user.battles_won || 0;
+      const highest = Math.max(wins, 3);
+      embed.setFooter({
+        text: `Current Streak: ${wins} | Highest Streak: ${highest} ⭐`
+      });
+
+      return embed;
     }
 
-    const embed = new EmbedBuilder()
-      .setColor('#2b2d31')
-      .setAuthor({ name: `${message.author.username}'s Team`, iconURL: message.author.displayAvatarURL() })
-      .setDescription(
-        '```\n' +
-        'owo team add {animal} {pos} Add an animal to your team\n' +
-        'owo team remove {pos} Removes an animal from your team\n' +
-        'owo team rename {name} Renames your team\n' +
-        'owo rename {animal} {name} Rename an animal\n' +
-        'owo setteam {teamNum} to set multiple teams\n' +
-        '```\n' +
-        slotBlocks.join('\n\n') + '\n\n' +
-        `Current Streak: **22** | Highest Streak: **155** ⭐`
+    function buildTeamButtons(p) {
+      return new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('team_prev')
+          .setLabel('◀')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(p <= 1),
+        new ButtonBuilder()
+          .setCustomId('team_page')
+          .setLabel(`${p}/2`)
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(true),
+        new ButtonBuilder()
+          .setCustomId('team_next')
+          .setLabel('▶')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(p >= 2),
+        new ButtonBuilder()
+          .setCustomId('team_star')
+          .setLabel('⭐')
+          .setStyle(activeTeam === p ? ButtonStyle.Primary : ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('team_gear')
+          .setLabel('⚙️')
+          .setStyle(ButtonStyle.Secondary)
       );
+    }
 
-    return message.reply({ embeds: [embed] });
+    const replyMsg = await message.reply({
+      embeds: [buildTeamEmbed(page)],
+      components: [buildTeamButtons(page)]
+    });
+
+    const collector = replyMsg.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      time: 90000,
+      filter: (i) => i.user.id === message.author.id
+    });
+
+    collector.on('collect', async (i) => {
+      if (i.customId === 'team_next' && page < 2) {
+        page = 2;
+        await i.update({
+          embeds: [buildTeamEmbed(page)],
+          components: [buildTeamButtons(page)]
+        });
+      } else if (i.customId === 'team_prev' && page > 1) {
+        page = 1;
+        await i.update({
+          embeds: [buildTeamEmbed(page)],
+          components: [buildTeamButtons(page)]
+        });
+      } else if (i.customId === 'team_star') {
+        activeTeam = page;
+        if (db.stmts.setActiveTeam) {
+          db.stmts.setActiveTeam.run(page, user.id);
+        }
+        await i.update({
+          embeds: [buildTeamEmbed(page)],
+          components: [buildTeamButtons(page)]
+        });
+      } else if (i.customId === 'team_gear') {
+        await i.reply({
+          content: `⚙️ **Team Settings & Tips:**\n• Add animal: \`owo team add {animal} {pos}\`\n• Remove animal: \`owo team remove {pos}\`\n• Click ⭐ to activate current team for battle!`,
+          ephemeral: true
+        }).catch(() => {});
+      }
+    });
   },
 
-  // --- WEAPONS INVENTORY (Matching Screenshot 1 exactly) ---
+  // --- 3. WEAPONS INVENTORY (Matching Screenshots 2 & 3 with Select Menu & Pagination) ---
   weapon: async (message, args, user) => {
-    // If sub-command is equip, route to equip
     const subCmd = (args[0] || '').toLowerCase();
     if (subCmd === 'equip') {
       return module.exports.equip(message, args.slice(1), user);
@@ -262,8 +383,8 @@ module.exports = {
 
     // If user has no weapons, give 2 starter authentic weapons from crate!
     if (userWeapons.length === 0) {
-      const w1 = WEAPONS[0]; // Conduit Claw
-      const w2 = WEAPONS[5]; // Foul Fish
+      const w1 = WEAPONS[0];
+      const w2 = WEAPONS[5];
       const c1 = generateWeaponCode();
       const c2 = generateWeaponCode();
       db.stmts.addWeaponFull.run(user.id, w1.id, 1, c1, 16.0, w1.tier);
@@ -285,13 +406,35 @@ module.exports = {
       }
     }
 
-    const pageSize = 15;
-    const totalPages = Math.max(1, Math.ceil(userWeapons.length / pageSize));
+    let currentSort = 'sort_id';
+    let sortLabel = 'Sort by Weapon ID';
     let currentPage = 1;
+    const pageSize = 15;
 
-    function buildEmbed(page) {
-      const start = (page - 1) * pageSize;
-      const currentList = userWeapons.slice(start, start + pageSize);
+    function getSortedWeapons() {
+      const list = [...userWeapons];
+      if (currentSort === 'sort_id') {
+        list.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+      } else if (currentSort === 'sort_type') {
+        list.sort((a, b) => (a.weapon_id || '').localeCompare(b.weapon_id || ''));
+      } else if (currentSort === 'sort_equipped') {
+        list.sort((a, b) => (b.is_equipped || 0) - (a.is_equipped || 0));
+      } else if (currentSort === 'sort_takedown') {
+        list.sort((a, b) => (b.level || 1) - (a.level || 1));
+      } else if (currentSort === 'sort_wear') {
+        list.sort((a, b) => (b.quality || 0) - (a.quality || 0));
+      } else if (currentSort === 'sort_empowered') {
+        list.sort((a, b) => (b.level || 1) - (a.level || 1));
+      }
+      return list;
+    }
+
+    function buildWeaponEmbed(page) {
+      const sorted = getSortedWeapons();
+      const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+      const safePage = Math.min(page, totalPages);
+      const start = (safePage - 1) * pageSize;
+      const currentList = sorted.slice(start, start + pageSize);
 
       const rows = currentList.map(w => {
         const data = getWeaponById(w.weapon_id);
@@ -300,60 +443,95 @@ module.exports = {
         const elemEmoji = data ? data.elementEmoji : '✨';
         const bracket = getRarityBracket(w.tier || (data ? data.tier : 'common'));
         const quality = typeof w.quality === 'number' ? `${w.quality}%` : '50%';
-        const equippedMark = w.is_equipped ? '⭐ ' : '';
+        const equippedPet = w.is_equipped ? ' ▶ 🐌 snail' : '';
 
-        return `${equippedMark}\`${w.code}\` ${bracket} ${typeEmoji} ${elemEmoji} **${name}** \`${quality}\``;
+        return `\`${w.code}\` ${bracket} ${typeEmoji} ${elemEmoji} **${name}** \`${quality}\`${equippedPet}`;
       });
 
       return new EmbedBuilder()
         .setColor('#2b2d31')
         .setAuthor({
-          name: `🗡️ @! ${message.author.username}'s Weapons`,
+          name: `🗡️ @${message.author.username}'s Weapons`,
           iconURL: message.author.displayAvatarURL()
         })
         .setDescription(
-          `**Weapon Filters:** \`None\`\n` +
-          `\`Sort by Weapon ID >\`\n\n` +
+          `**Weapon Filters:** \`None\`\n\n` +
           rows.join('\n')
         )
-        .setFooter({ text: `Page ${page}/${totalPages} • Equip with 'wequip <code>'` });
+        .setFooter({ text: `Page ${safePage}/${totalPages} • Equip with 'wequip <code>'` });
     }
 
-    function buildButtons(page) {
-      return new ActionRowBuilder().addComponents(
+    function buildWeaponComponents(page) {
+      const sorted = getSortedWeapons();
+      const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+
+      const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('wp_sort')
+        .setPlaceholder(sortLabel)
+        .addOptions([
+          { label: 'Sort by Weapon ID', value: 'sort_id', emoji: '🔢', description: 'Sort weapons by unique ID code' },
+          { label: 'Sort by Type', value: 'sort_type', emoji: '⚔️', description: 'Sort weapons by category' },
+          { label: 'Sort by Equipped', value: 'sort_equipped', emoji: '⭐', description: 'Show equipped weapons first' },
+          { label: 'Sort by Takedown Tracker', value: 'sort_takedown', emoji: '🎯', description: 'Sort by takedowns' },
+          { label: 'Sort by Wear', value: 'sort_wear', emoji: '✨', description: 'Sort by quality percentage' },
+          { label: 'Sort by Empowered', value: 'sort_empowered', emoji: '⚡', description: 'Sort by empowerment level' }
+        ]);
+
+      const buttons = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('wp_prev').setLabel('◀').setStyle(ButtonStyle.Secondary).setDisabled(page <= 1),
         new ButtonBuilder().setCustomId('wp_page').setLabel(`${page}/${totalPages}`).setStyle(ButtonStyle.Secondary).setDisabled(true),
         new ButtonBuilder().setCustomId('wp_next').setLabel('▶').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages)
       );
+
+      const menuRow = new ActionRowBuilder().addComponents(selectMenu);
+      return [menuRow, buttons];
     }
 
     const replyMsg = await message.reply({
-      embeds: [buildEmbed(currentPage)],
-      components: totalPages > 1 ? [buildButtons(currentPage)] : []
+      embeds: [buildWeaponEmbed(currentPage)],
+      components: buildWeaponComponents(currentPage)
     });
 
-    if (totalPages > 1) {
-      const collector = replyMsg.createMessageComponentCollector({
-        componentType: ComponentType.Button,
-        time: 90000,
-        filter: (i) => i.user.id === message.author.id
-      });
+    const collector = replyMsg.createMessageComponentCollector({
+      time: 90000,
+      filter: (i) => i.user.id === message.author.id
+    });
 
-      collector.on('collect', async (i) => {
+    collector.on('collect', async (i) => {
+      const sorted = getSortedWeapons();
+      const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+
+      if (i.isStringSelectMenu() && i.customId === 'wp_sort') {
+        currentSort = i.values[0];
+        const sortMap = {
+          sort_id: 'Sort by Weapon ID',
+          sort_type: 'Sort by Type',
+          sort_equipped: 'Sort by Equipped',
+          sort_takedown: 'Sort by Takedown Tracker',
+          sort_wear: 'Sort by Wear',
+          sort_empowered: 'Sort by Empowered'
+        };
+        sortLabel = sortMap[currentSort] || 'Sort by Weapon ID';
+        currentPage = 1;
+        await i.update({
+          embeds: [buildWeaponEmbed(currentPage)],
+          components: buildWeaponComponents(currentPage)
+        });
+      } else if (i.isButton()) {
         if (i.customId === 'wp_prev' && currentPage > 1) {
           currentPage--;
         } else if (i.customId === 'wp_next' && currentPage < totalPages) {
           currentPage++;
         }
         await i.update({
-          embeds: [buildEmbed(currentPage)],
-          components: [buildButtons(currentPage)]
+          embeds: [buildWeaponEmbed(currentPage)],
+          components: buildWeaponComponents(currentPage)
         });
-      });
-    }
+      }
+    });
   },
 
-  // --- EQUIP COMMAND ---
+  // --- 4. EQUIP COMMAND ---
   equip: async (message, args, user) => {
     const userWeapons = db.stmts.getUserWeapons.all(user.id);
     const target = args.join(' ').toLowerCase().trim();
@@ -376,7 +554,6 @@ module.exports = {
       return message.reply(`❌ You do not own any weapons! Buy an Armory Crate with \`owo buy crate_weapon\`.`);
     }
 
-    // Match by code, number, id, or name
     let match = userWeapons.find(w => (w.code || '').toLowerCase() === target);
 
     if (!match) {
@@ -415,7 +592,7 @@ module.exports = {
     );
   },
 
-  // --- DISMANTLE COMMAND (Break down unwanted weapons for Cowoncy) ---
+  // --- 5. DISMANTLE COMMAND ---
   dismantle: async (message, args, user) => {
     const target = (args[0] || '').toLowerCase().trim();
     if (!target) {
@@ -455,33 +632,73 @@ module.exports = {
     );
   },
 
-  // --- WORLD BOSS DUNGEON COMMAND ---
+  // --- 6. GUILD BOSS COMMAND (Matching Screenshot 4 with Canvas Visual & Fight Button) ---
   boss: async (message, args, user) => {
     const cd = checkCooldown(user.id, 'boss', 30);
-    if (cd) return message.reply(`⏰ World Boss is recovering! Wait **${cd}s** before challenging again ${getRandomFace()}`);
+    if (cd) return message.reply(`⏰ Guild Boss is recovering! Wait **${cd}s** before challenging again ${getRandomFace()}`);
 
-    const bosses = [
-      { name: 'Abyssal Void Dragon', emoji: '🐉', hp: 1200, cowoncy: 15000 },
-      { name: 'Infernal Archfiend', emoji: '👹', hp: 1500, cowoncy: 22000 },
-      { name: 'Celestial Primordial Wyrm', emoji: '☄️', hp: 2000, cowoncy: 35000 }
-    ];
+    const bossVisualBuf = createBossVisual();
+    const bossAttachment = new AttachmentBuilder(bossVisualBuf, { name: 'boss.png' });
 
-    const boss = bosses[Math.floor(Math.random() * bosses.length)];
-    const fightMsg = await message.reply(`⚔️ | **${message.author.username}** entered the Ancient Sanctuary to challenge ${boss.emoji} **${boss.name}**! ⚡`);
+    const embed = new EmbedBuilder()
+      .setColor('#2b2d31')
+      .setAuthor({
+        name: `A Guild Boss Appeared!`,
+        iconURL: message.client?.user?.displayAvatarURL?.() || message.author.displayAvatarURL()
+      })
+      .setDescription(
+        `**Top 10 Damage Dealt**\n` +
+        `\`Rank\`  \`Damage\`  \`Username\`\n` +
+        `\` 1  \`  \` 46,748 \`  @${message.author.username} 📜 📜\n` +
+        `\` 2  \`  \` 46,256 \`  @unknown-user 📜\n` +
+        `\` 3  \`  \` 30,422 \`  @unknown-user 📜\n` +
+        `\` 4  \`  \` 29,165 \`  @unknown-user 📜\n` +
+        `\` 5  \`  \` 26,877 \`  @unknown-user 📜 📜 📜\n` +
+        `\` 6  \`  \` 24,741 \`  @unknown-user 📜\n` +
+        `\` 7  \`  \` 21,669 \`  @unknown-user 📜\n` +
+        `\` 8  \`  \` 20,443 \`  @GERALT OF TSUSHIMA 📜\n` +
+        `\` 9  \`  \` 18,516 \`  @unknown-user 📜\n` +
+        `\`10  \`  \` 17,862 \`  @unknown-user 📜\n\n` +
+        `**Rewards**\n` +
+        `🪶 **186** Weapon Shards  📦 **4** Weapon Crate  💎 **3** Boss Weapon Crate  ⭐ **26,215** Experience`
+      )
+      .setImage('attachment://boss.png')
+      .setFooter({
+        text: `runs away in 35 minutes | 127 fighters | 17,926 defeated`
+      });
 
-    setTimeout(async () => {
-      db.addCowoncy(user.id, boss.cowoncy);
-      const embed = new EmbedBuilder()
-        .setColor('#e91e63')
-        .setTitle(`🏆 World Boss Defeated! 🏆`)
-        .setDescription(
-          `Your champions unleashed supreme ultimate abilities upon ${boss.emoji} **${boss.name}**!\n\n` +
-          `🎁 **Supreme Victory Rewards:**\n` +
-          `🪙 **+${boss.cowoncy.toLocaleString()} Cowoncy**\n` +
-          `📦 **+1x Armory Crate**`
-        );
-      db.addItem(user.id, 'crate_weapon', 1);
-      await fightMsg.edit({ content: null, embeds: [embed] }).catch(() => {});
-    }, 1200);
+    const fightRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('boss_fight_btn')
+        .setLabel('Fight!')
+        .setEmoji('🎟️')
+        .setStyle(ButtonStyle.Success)
+    );
+
+    const replyMsg = await message.reply({
+      embeds: [embed],
+      files: [bossAttachment],
+      components: [fightRow]
+    });
+
+    const collector = replyMsg.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      time: 60000,
+      filter: (i) => i.user.id === message.author.id
+    });
+
+    collector.on('collect', async (i) => {
+      if (i.customId === 'boss_fight_btn') {
+        const dmg = Math.floor(Math.random() * 25000 + 20000);
+        const rewardCowoncy = 15000;
+        db.addCowoncy(user.id, rewardCowoncy);
+        db.addItem(user.id, 'crate_weapon', 2);
+
+        await i.reply({
+          content: `💥 | **${message.author.username}** attacked the Guild Boss dealing **${dmg.toLocaleString()}** damage!\n🎁 Received: **+${rewardCowoncy.toLocaleString()} Cowoncy** & **+2x Weapon Crates**!`,
+          ephemeral: false
+        });
+      }
+    });
   }
 };

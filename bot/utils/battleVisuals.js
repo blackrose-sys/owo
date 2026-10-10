@@ -22,7 +22,7 @@ function roundRect(ctx, x, y, width, height, radius, fill = true, stroke = false
 /**
  * Generate authentic OwO Battle Visual (Matching Picture 2)
  */
-function createBattleVisual(playerPets, enemyPets, turns = 16, streak = 59, xp = 200) {
+function createBattleVisual(playerPets = [], enemyPets = [], turns = 16, streak = 59, xp = 200) {
   const width = 640;
   const height = 340;
   const canvas = createCanvas(width, height);
@@ -43,7 +43,7 @@ function createBattleVisual(playerPets, enemyPets, turns = 16, streak = 59, xp =
   // Draw 3 Player Pets (Left column)
   const leftX = 14;
   for (let i = 0; i < 3; i++) {
-    const pet = playerPets[i] || {
+    const pet = (playerPets && playerPets[i]) || {
       name: 'Champion',
       emoji: '🐻',
       color: '#4caf50',
@@ -129,7 +129,7 @@ function createBattleVisual(playerPets, enemyPets, turns = 16, streak = 59, xp =
   // Draw 3 Enemy Pets (Right column - Defeated as in screenshot)
   const rightX = width / 2 + 16;
   for (let i = 0; i < 3; i++) {
-    const enemy = enemyPets[i] || {
+    const enemy = (enemyPets && enemyPets[i]) || {
       name: ['cat', 'sheep', 'pig'][i],
       emoji: ['🐱', '🐑', '🐷'][i],
       maxHp: [688, 780, 724][i],

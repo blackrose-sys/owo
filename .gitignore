@@ -20,3 +20,11 @@ scratch/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Database journals and backups
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite.bak*
+database/*.sqlite-wal
+database/*.sqlite-shm
+database/*.sqlite.bak*

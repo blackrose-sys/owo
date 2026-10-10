@@ -85,15 +85,30 @@ const COMMANDS = {
   // Battle & Weapons
   battle: battle.battle,
   b: battle.battle,
+  wb: battle.battle,
   fight: battle.battle,
   team: battle.team,
+  wteam: battle.team,
   t: battle.team,
   tm: battle.team,
   owotm: battle.team,
   wtm: battle.team,
   wt: battle.team,
+  setteam: (message, args, user) => {
+    const num = parseInt(args[0], 10) || 1;
+    if (num < 1 || num > 2) return message.reply('❌ Team number must be 1 or 2! Usage: `owo setteam <1/2>`');
+    if (db.stmts.setActiveTeam) db.stmts.setActiveTeam.run(num, user.id);
+    return message.reply(`✅ Switched active battle team to **Team ${num}**! ⭐`);
+  },
+  wsetteam: (message, args, user) => {
+    const num = parseInt(args[0], 10) || 1;
+    if (num < 1 || num > 2) return message.reply('❌ Team number must be 1 or 2! Usage: `wsetteam <1/2>`');
+    if (db.stmts.setActiveTeam) db.stmts.setActiveTeam.run(num, user.id);
+    return message.reply(`✅ Switched active battle team to **Team ${num}**! ⭐`);
+  },
   weapon: battle.weapon,
   weapons: battle.weapon,
+  wweapon: battle.weapon,
   wp: battle.weapon,
   owow: battle.weapon,
   ww: battle.weapon,
@@ -103,6 +118,7 @@ const COMMANDS = {
   we: battle.equip,
   dismantle: battle.dismantle,
   boss: battle.boss,
+  wboss: battle.boss,
 
   // Shop, Crates & Unboxing
   shop: shop.shop,
