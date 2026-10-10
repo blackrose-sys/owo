@@ -593,49 +593,81 @@ function setupWebSocket() {
 }
 
 // ==========================================================
-// Admin Add Cash / Cowoncy Injector Controller
+// Admin Master Injector Controller (Pets, Items, Weapons & Cash)
 // ==========================================================
 const adminState = {
   users: [],
   selectedUserId: '',
-  mode: 'add' // 'add' or 'set'
+  activeTab: 'pets',
+  selectedPetId: 'dragon',
+  petFilter: 'all',
+  petSearchQuery: '',
+  selectedItemId: 'crate_weapon',
+  cashMode: 'add'
 };
 
-// Open the Add Cash modal
-window.openAddCashModal = async function() {
-  const modal = document.getElementById('modal-add-cash');
+// Open the Admin Master modal
+window.openAdminManagerModal = async function(initialTab = 'pets') {
+  const modal = document.getElementById('modal-admin-manager');
   if (!modal) return;
 
   modal.style.display = 'flex';
-  clearCashAlert();
+  clearAdminAlerts();
 
-  // Close when clicking outside modal window
   modal.onclick = (e) => {
-    if (e.target === modal) closeAddCashModal();
+    if (e.target === modal) closeAdminManagerModal();
   };
 
-  // Close on Escape
-  document.addEventListener('keydown', onModalEscape);
+  document.addEventListener('keydown', onAdminModalEscape);
 
-  // Load registered users from backend
+  switchAdminTab(initialTab);
   await refreshAdminUsers();
+  renderAdminPetsGrid();
+  renderAdminItemsGrid();
+  renderAdminWeaponsDropdown();
 };
 
-function onModalEscape(e) {
-  if (e.key === 'Escape') closeAddCashModal();
+function onAdminModalEscape(e) {
+  if (e.key === 'Escape') {
+    closeAdminManagerModal();
+    closeAddCashModal();
+  }
 }
 
-// Close the Add Cash modal
-window.closeAddCashModal = function() {
-  const modal = document.getElementById('modal-add-cash');
+// Close the Admin Master modal
+window.closeAdminManagerModal = function() {
+  const modal = document.getElementById('modal-admin-manager');
   if (modal) modal.style.display = 'none';
-  document.removeEventListener('keydown', onModalEscape);
+  document.removeEventListener('keydown', onAdminModalEscape);
 };
 
-// Fetch users from API and populate selector
+// Switch Tab inside Admin modal
+window.switchAdminTab = function(tabName) {
+  adminState.activeTab = tabName;
+
+  // Update tab buttons
+  document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+    if (btn.dataset.adminTab === tabName) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Update tab panes
+  document.querySelectorAll('.admin-tab-pane').forEach(pane => {
+    pane.classList.remove('active');
+  });
+
+  const activePane = document.getElementById(`admin-pane-${tabName}`);
+  if (activePane) activePane.classList.add('active');
+};
+
+// Fetch users from API and populate selectors
 async function refreshAdminUsers(preferredUserId = null) {
-  const select = document.getElementById('cash-user-select');
-  if (!select) return;
+  const adminSelect = document.getElementById('admin-user-select');
+  const cashSelect = document.getElementById('cash-user-select');
+  if (!adminSelect && !cashSelect) return;
 
   try {
     const res = await fetch('/api/admin/users');
@@ -644,34 +676,33 @@ async function refreshAdminUsers(preferredUserId = null) {
 
     adminState.users = data.users || [];
 
-    // Populate dropdown
-    select.innerHTML = '';
+    const populateDropdown = (sel) => {
+      if (!sel) return;
+      sel.innerHTML = '';
 
-    const defaultOpt = document.createElement('option');
-    defaultOpt.value = '';
-    defaultOpt.disabled = true;
-    defaultOpt.textContent = '── Select Player ──';
-    select.appendChild(defaultOpt);
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.disabled = true;
+      defaultOpt.textContent = '── Select Player ──';
+      sel.appendChild(defaultOpt);
 
-    adminState.users.forEach(u => {
-      const opt = document.createElement('option');
-      opt.value = u.id;
-      const emoji = u.display_animal || '👤';
-      opt.textContent = `${emoji} ${u.username} (${u.cowoncy.toLocaleString()} Cowoncy) — ID: ${u.id}`;
-      select.appendChild(opt);
-    });
+      adminState.users.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        const emoji = u.display_animal || '👤';
+        opt.textContent = `${emoji} ${u.username} (${u.cowoncy.toLocaleString()} Cowoncy) — ID: ${u.id}`;
+        sel.appendChild(opt);
+      });
 
-    // Custom ID option
-    const customOpt = document.createElement('option');
-    customOpt.value = '__custom__';
-    customOpt.textContent = '✏️ Enter Custom User ID / Discord ID...';
-    select.appendChild(customOpt);
+      const customOpt = document.createElement('option');
+      customOpt.value = '__custom__';
+      customOpt.textContent = '✏️ Enter Custom User ID / Discord ID...';
+      sel.appendChild(customOpt);
+    };
 
-    // Pick initial selection:
-    // 1) preferredUserId if specified
-    // 2) kamotedelight (370485038879604738) if present
-    // 3) state.userId (web_player)
-    // 4) first user
+    populateDropdown(adminSelect);
+    populateDropdown(cashSelect);
+
     let target = preferredUserId;
     if (!target) {
       if (adminState.users.some(u => u.id === '370485038879604738')) {
@@ -684,23 +715,25 @@ async function refreshAdminUsers(preferredUserId = null) {
     }
 
     if (target) {
-      select.value = target;
+      if (adminSelect) adminSelect.value = target;
+      if (cashSelect) cashSelect.value = target;
       adminState.selectedUserId = target;
     }
 
-    onTargetUserChanged();
+    onAdminTargetUserChanged();
+    if (window.onTargetUserChanged) onTargetUserChanged();
   } catch (err) {
     console.error('Error fetching admin users:', err);
-    select.innerHTML = '<option value="__custom__">✏️ Custom User ID (Manual Entry)</option>';
-    const customGroup = document.getElementById('custom-user-group');
+    if (adminSelect) adminSelect.innerHTML = '<option value="__custom__">✏️ Custom User ID (Manual Entry)</option>';
+    const customGroup = document.getElementById('admin-custom-user-group');
     if (customGroup) customGroup.style.display = 'block';
   }
 }
 
-// When dropdown selection changes
-window.onTargetUserChanged = function() {
-  const select = document.getElementById('cash-user-select');
-  const customGroup = document.getElementById('custom-user-group');
+// When user selection changes in Admin Modal
+window.onAdminTargetUserChanged = function() {
+  const select = document.getElementById('admin-user-select');
+  const customGroup = document.getElementById('admin-custom-user-group');
   if (!select) return;
 
   const val = select.value;
@@ -708,175 +741,613 @@ window.onTargetUserChanged = function() {
 
   if (val === '__custom__') {
     if (customGroup) customGroup.style.display = 'block';
-    onCustomIdInput();
+    onAdminCustomIdInput();
   } else {
     if (customGroup) customGroup.style.display = 'none';
     const user = adminState.users.find(u => u.id === val);
-    updateTargetCard(user);
+    updateAdminTargetCard(user);
+    if (val) fetchAdminUserExtraDetails(val);
   }
 };
 
-// Handle manual Discord ID typing
-window.onCustomIdInput = function() {
-  const input = document.getElementById('cash-custom-id');
+window.onAdminCustomIdInput = function() {
+  const input = document.getElementById('admin-custom-id');
   const customId = input ? input.value.trim() : '';
 
   const existingUser = adminState.users.find(u => u.id === customId);
   if (existingUser) {
-    updateTargetCard(existingUser);
+    updateAdminTargetCard(existingUser);
+    fetchAdminUserExtraDetails(customId);
   } else if (customId) {
-    updateTargetCard({
+    updateAdminTargetCard({
       id: customId,
       username: 'Discord User',
       display_animal: '✨',
       cowoncy: 0
     });
+    fetchAdminUserExtraDetails(customId);
   } else {
-    updateTargetCard(null);
+    updateAdminTargetCard(null);
   }
 };
 
-// Update preview card
-function updateTargetCard(user) {
-  const nameEl = document.getElementById('target-user-name');
-  const idEl = document.getElementById('target-user-id');
-  const balEl = document.getElementById('target-user-bal');
-  const avatarEl = document.getElementById('target-user-avatar');
+async function fetchAdminUserExtraDetails(userId) {
+  try {
+    const res = await fetch(`/api/admin/user-details/${userId}`);
+    const data = await res.json();
+    if (data.success && data.user) {
+      updateAdminTargetCard(data.user, data.zoo, data.weapons);
+    }
+  } catch (e) {}
+}
+
+function updateAdminTargetCard(user, zoo = null, weapons = null) {
+  const nameEl = document.getElementById('admin-target-user-name');
+  const idEl = document.getElementById('admin-target-user-id');
+  const balEl = document.getElementById('admin-target-bal');
+  const avatarEl = document.getElementById('admin-target-user-avatar');
+  const zooCountEl = document.getElementById('admin-target-zoo-count');
+  const weaponCountEl = document.getElementById('admin-target-weapon-count');
 
   if (!user) {
-    if (nameEl) nameEl.textContent = 'No user selected';
+    if (nameEl) nameEl.textContent = 'No player selected';
     if (idEl) idEl.textContent = 'ID: —';
-    if (balEl) balEl.textContent = '— Cowoncy';
+    if (balEl) balEl.textContent = '0';
     if (avatarEl) avatarEl.textContent = '❓';
+    if (zooCountEl) zooCountEl.textContent = '0';
+    if (weaponCountEl) weaponCountEl.textContent = '0';
     return;
   }
 
   if (nameEl) nameEl.textContent = user.username;
   if (idEl) idEl.textContent = `ID: ${user.id}`;
-  if (balEl) balEl.textContent = `${user.cowoncy.toLocaleString()} Cowoncy`;
+  if (balEl) balEl.textContent = `${user.cowoncy.toLocaleString()}`;
   if (avatarEl) avatarEl.textContent = user.display_animal || '👤';
+
+  if (zooCountEl && zoo) {
+    const totalCount = zoo.reduce((acc, z) => acc + (z.count || 0), 0);
+    zooCountEl.textContent = `${zoo.length} species (${totalCount})`;
+  }
+
+  if (weaponCountEl && weapons) {
+    weaponCountEl.textContent = `${weapons.length}`;
+  }
+
+  renderAdminUserWeapons(weapons, data?.team);
 }
 
-// Set mode (add vs set)
-window.setCashMode = function(mode) {
-  adminState.mode = mode;
-  const btnAdd = document.getElementById('btn-mode-add');
-  const btnSet = document.getElementById('btn-mode-set');
-  const confirmBtn = document.getElementById('btn-confirm-give-cash');
+// ---------------- Pet Grid & Selection ----------------
+function renderAdminPetsGrid() {
+  const grid = document.getElementById('admin-pet-grid');
+  if (!grid || !state.animals || state.animals.length === 0) return;
 
-  if (mode === 'add') {
-    if (btnAdd) btnAdd.classList.add('active');
-    if (btnSet) btnSet.classList.remove('active');
-    if (confirmBtn) confirmBtn.innerHTML = '<span>➕ Add Cowoncy</span>';
-  } else {
-    if (btnAdd) btnAdd.classList.remove('active');
-    if (btnSet) btnSet.classList.add('active');
-    if (confirmBtn) confirmBtn.innerHTML = '<span>🎯 Set Exact Balance</span>';
+  const query = adminState.petSearchQuery.toLowerCase().trim();
+  const filter = adminState.petFilter;
+
+  const filtered = state.animals.filter(a => {
+    if (filter !== 'all' && a.tier.toLowerCase() !== filter) return false;
+    if (query && !a.name.toLowerCase().includes(query) && !a.id.toLowerCase().includes(query)) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div style="grid-column: 1 / -1; padding: 2rem; text-align: center; color: var(--text-dim);">No animals found matching criteria.</div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(a => {
+    const isSelected = a.id === adminState.selectedPetId;
+    const tierColor = (state.tiers && state.tiers[a.tier]?.color) || '#9e9e9e';
+    return `
+      <div class="admin-card ${isSelected ? 'selected' : ''}" onclick="selectAdminPet('${a.id}')">
+        <div class="admin-card-emoji">${a.emoji}</div>
+        <div class="admin-card-name">${a.name}</div>
+        <div class="admin-card-tier" style="background: ${tierColor}25; color: ${tierColor}; border: 1px solid ${tierColor}60;">${a.tier}</div>
+        <div style="font-size: 0.65rem; color: var(--text-dim); font-family: var(--font-mono);">⚔️${a.atk} 🛡️${a.def}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.selectAdminPet = function(animalId) {
+  adminState.selectedPetId = animalId;
+  renderAdminPetsGrid();
+};
+
+window.filterAdminPets = function(tier) {
+  adminState.petFilter = tier;
+  document.querySelectorAll('.admin-tier-pills .admin-pill').forEach(btn => {
+    if (btn.dataset.petFilter === tier) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  renderAdminPetsGrid();
+};
+
+window.onAdminPetSearch = function() {
+  const input = document.getElementById('admin-pet-search');
+  adminState.petSearchQuery = input ? input.value : '';
+  renderAdminPetsGrid();
+};
+
+window.setAdminPetQty = function(qty) {
+  const input = document.getElementById('admin-pet-qty');
+  if (input) input.value = qty;
+};
+
+// ---------------- Item Grid & Selection ----------------
+function renderAdminItemsGrid() {
+  const grid = document.getElementById('admin-item-grid');
+  if (!grid || !state.shopItems || state.shopItems.length === 0) return;
+
+  grid.innerHTML = state.shopItems.map(item => {
+    const isSelected = item.id === adminState.selectedItemId;
+    return `
+      <div class="admin-card ${isSelected ? 'selected' : ''}" onclick="selectAdminItem('${item.id}')">
+        <div class="admin-card-emoji">${item.emoji}</div>
+        <div class="admin-card-name">${item.name}</div>
+        <div class="admin-card-tier" style="background: rgba(255, 204, 0, 0.15); color: #ffcc00; border: 1px solid rgba(255, 204, 0, 0.4);">${item.category || 'item'}</div>
+        <div style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">🪙 ${item.price?.toLocaleString()}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.selectAdminItem = function(itemId) {
+  adminState.selectedItemId = itemId;
+  renderAdminItemsGrid();
+};
+
+window.setAdminItemQty = function(qty) {
+  const input = document.getElementById('admin-item-qty');
+  if (input) input.value = qty;
+};
+
+// ---------------- Weapons Dropdown & Build Hint ----------------
+function renderAdminWeaponsDropdown() {
+  const select = document.getElementById('admin-weapon-select');
+  if (!select || !state.weapons || state.weapons.length === 0) return;
+
+  select.innerHTML = state.weapons.map(w => `
+    <option value="${w.id}">
+      ${w.typeEmoji || '⚔️'} ${w.name} [${w.tier.toUpperCase()}] (+${w.atk} ATK, +${w.def} DEF, +${w.crit}% Crit)
+    </option>
+  `).join('');
+
+  updateAdminWeaponBuildHint();
+}
+
+window.updateAdminWeaponBuildHint = function() {
+  const select = document.getElementById('admin-weapon-select');
+  const hintEl = document.getElementById('admin-weapon-build-hint');
+  if (!select || !hintEl || !state.weapons) return;
+
+  const weaponId = select.value;
+  const weapon = state.weapons.find(w => w.id === weaponId);
+  if (!weapon) {
+    hintEl.innerHTML = '';
+    return;
+  }
+
+  const type = (weapon.type || '').toLowerCase();
+  let buildName = 'Brawler (Cleaver)';
+  let buildRole = '⚔️ Berserker Cleave (+35% ATK, Cleave AOE)';
+  let matchingAnimals = 'Lion, Gorilla, Crocodile, T-Rex, Dog, Horse';
+
+  if (['shield', 'armor'].includes(type)) {
+    buildName = 'Iron Fortress (Tank)';
+    buildRole = '🛡️ Taunt & +30% Damage Mitigation (+30% HP & DEF)';
+    matchingAnimals = 'Bear, Elephant, Hippo, Rhino, Panda, Turtle, Whale';
+  } else if (['dagger', 'claw', 'scythe'].includes(type)) {
+    buildName = 'Shadow Striker (Assassin)';
+    buildRole = '🗡️ Bleed True Damage (+35% Crit Rate, +25% Speed)';
+    matchingAnimals = 'Wolf, Leopard, Tiger, Fox, Snake, Bat, Raccoon';
+  } else if (['bow', 'crossbow', 'slingshot'].includes(type)) {
+    buildName = 'Hawkeye Ranger (Sniper)';
+    buildRole = '🏹 Armor Piercing (+40% Crit DMG, Bypasses 50% DEF)';
+    matchingAnimals = 'Eagle, Owl, Falcon, Hawk, Rabbit, Giraffe';
+  } else if (['staff', 'wand', 'scepter', 'relic', 'orb'].includes(type)) {
+    buildName = 'Arcane Mystic (Mage)';
+    buildRole = '🪄 Arcane Surge (+50% Spell Damage, +30 Mana Regen)';
+    matchingAnimals = 'Unicorn, Dragon, Squid, Octopus, Phoenix, Kitsune';
+  }
+
+  hintEl.innerHTML = `
+    <strong>⭐ Build Synergy:</strong> <span style="color: #fff;">${buildName}</span> • ${buildRole}<br/>
+    <span style="color: var(--text-muted); font-size: 0.8rem;">🐾 Best suited for: ${matchingAnimals}</span>
+  `;
+};
+
+function renderAdminUserWeapons(weapons = [], team = []) {
+  const container = document.getElementById('admin-user-weapons-list');
+  if (!container) return;
+
+  if (!weapons || weapons.length === 0) {
+    container.innerHTML = `<div style="grid-column: 1 / -1; padding: 1rem; text-align: center; color: var(--text-dim); font-size: 0.85rem;">Player has no weapons in armory. Use the form above to forge weapons!</div>`;
+    return;
+  }
+
+  const teamMap = new Map();
+  if (team && Array.isArray(team)) {
+    team.forEach(t => {
+      const animal = (state.animals || []).find(a => a.id === t.animal_id);
+      teamMap.set(t.slot, animal ? `${animal.emoji} ${animal.name}` : `Pet`);
+    });
+  }
+
+  container.innerHTML = weapons.map(w => {
+    const data = (state.weapons || []).find(item => item.id === w.weapon_id);
+    const name = data ? data.name : w.weapon_id;
+    const typeEmoji = data ? data.typeEmoji : '🗡️';
+    const tier = (w.tier || data?.tier || 'common').toUpperCase();
+    const isEquipped = w.is_equipped === 1;
+    const slot = w.equipped_to || (isEquipped ? 1 : null);
+    const petLabel = slot ? teamMap.get(slot) || `Slot ${slot}` : null;
+
+    return `
+      <div class="admin-card" style="padding: 0.6rem; text-align: left; position: relative;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+          <span style="font-size: 1.25rem;">${typeEmoji}</span>
+          <span class="admin-card-tier" style="font-size: 0.65rem;">#${w.code || 'WEAPON'}</span>
+        </div>
+        <div style="font-weight: 700; font-size: 0.8rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
+        <div style="font-size: 0.7rem; color: var(--accent-cyan);">Lv.${w.level} • [${tier}] • ${w.quality || 50}%</div>
+        ${isEquipped ? `
+          <div style="margin-top: 0.35rem; font-size: 0.7rem; color: #4caf50; font-weight: 700;">
+            ✅ Equipped to [${slot}] ${petLabel || ''}
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary" style="margin-top: 0.35rem; width: 100%; font-size: 0.7rem; padding: 0.2rem;" onclick="adminEquipWeapon(${w.id}, ${slot}, 'unequip')">
+            Unequip
+          </button>
+        ` : `
+          <div style="display: flex; gap: 0.25rem; margin-top: 0.4rem;">
+            <button type="button" class="btn btn-sm btn-secondary" style="flex: 1; font-size: 0.65rem; padding: 0.2rem;" title="Equip to Slot 1" onclick="adminEquipWeapon(${w.id}, 1, 'equip')">Eq.1</button>
+            <button type="button" class="btn btn-sm btn-secondary" style="flex: 1; font-size: 0.65rem; padding: 0.2rem;" title="Equip to Slot 2" onclick="adminEquipWeapon(${w.id}, 2, 'equip')">Eq.2</button>
+            <button type="button" class="btn btn-sm btn-secondary" style="flex: 1; font-size: 0.65rem; padding: 0.2rem;" title="Equip to Slot 3" onclick="adminEquipWeapon(${w.id}, 3, 'equip')">Eq.3</button>
+          </div>
+        `}
+      </div>
+    `;
+  }).join('');
+}
+
+window.adminEquipWeapon = async function(weaponId, slot, action = 'equip') {
+  const userId = getAdminTargetUserId();
+  if (!userId) return;
+
+  try {
+    const res = await fetch('/api/admin/equip-weapon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, weaponId, slot, action })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    showAdminAlert('weapon', 'success', data.message);
+    fetchAdminUserExtraDetails(userId);
+  } catch (err) {
+    showAdminAlert('weapon', 'error', err.message);
   }
 };
 
-// Preset chips handler
-window.setPresetAmount = function(amount) {
-  const amountInput = document.getElementById('cash-amount-input');
-  if (amountInput) {
-    amountInput.value = amount;
-    amountInput.focus();
-  }
-};
-
-// Status message inside modal
-function showCashAlert(type, message) {
-  const alertEl = document.getElementById('cash-modal-status');
+// ---------------- Feedback Alerts ----------------
+function showAdminAlert(tab, type, message) {
+  const alertEl = document.getElementById(`admin-${tab}-alert`);
   if (!alertEl) return;
   alertEl.className = `modal-status-alert ${type}`;
   alertEl.innerHTML = `${type === 'success' ? '✅' : '❌'} ${message}`;
   alertEl.style.display = 'flex';
 }
 
-function clearCashAlert() {
-  const alertEl = document.getElementById('cash-modal-status');
-  if (alertEl) alertEl.style.display = 'none';
+function clearAdminAlerts() {
+  ['pet', 'item', 'weapon', 'cash'].forEach(t => {
+    const el = document.getElementById(`admin-${t}-alert`);
+    if (el) el.style.display = 'none';
+  });
 }
 
-// Submit cash injection
-window.submitAddCash = async function() {
-  const select = document.getElementById('cash-user-select');
-  const customInput = document.getElementById('cash-custom-id');
-  const amountInput = document.getElementById('cash-amount-input');
-  const confirmBtn = document.getElementById('btn-confirm-give-cash');
-
-  let targetUserId = select ? select.value : '';
-  if (targetUserId === '__custom__') {
-    targetUserId = customInput ? customInput.value.trim() : '';
+function getAdminTargetUserId() {
+  const select = document.getElementById('admin-user-select');
+  const customInput = document.getElementById('admin-custom-id');
+  let id = select ? select.value : '';
+  if (id === '__custom__') {
+    id = customInput ? customInput.value.trim() : '';
   }
+  return id;
+}
 
-  if (!targetUserId) {
-    showCashAlert('error', 'Please select a recipient or enter a Discord User ID.');
-    return;
+// ---------------- Submit Injections ----------------
+window.submitGiveSelectedPet = async function() {
+  const userId = getAdminTargetUserId();
+  if (!userId) return showAdminAlert('pet', 'error', 'Please select a recipient player or enter a Discord User ID.');
+  if (!adminState.selectedPetId) return showAdminAlert('pet', 'error', 'Please select a pet to give.');
+
+  const qty = parseInt(document.getElementById('admin-pet-qty')?.value, 10) || 1;
+  const btn = document.getElementById('btn-submit-give-pet');
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/admin/give-pet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, animalId: adminState.selectedPetId, count: qty })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    if (window.sound?.playWin) window.sound.playWin();
+    showAdminAlert('pet', 'success', data.message);
+    fetchAdminUserExtraDetails(userId);
+
+    if (userId === state.userId || userId === 'web_player') {
+      await loadUserData();
+    }
+  } catch (err) {
+    showAdminAlert('pet', 'error', err.message);
+  } finally {
+    if (btn) btn.disabled = false;
   }
+};
 
-  const rawAmount = amountInput ? amountInput.value : '';
-  const parsedAmount = Number(rawAmount);
+window.submitGivePetAll = async function(count = 1) {
+  const userId = getAdminTargetUserId();
+  if (!userId) return showAdminAlert('pet', 'error', 'Please select a recipient player.');
 
+  try {
+    const res = await fetch('/api/admin/give-pet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, animalId: '__ALL__', count })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    if (window.sound?.playWin) window.sound.playWin();
+    showAdminAlert('pet', 'success', data.message);
+    fetchAdminUserExtraDetails(userId);
+
+    if (userId === state.userId || userId === 'web_player') {
+      await loadUserData();
+    }
+  } catch (err) {
+    showAdminAlert('pet', 'error', err.message);
+  }
+};
+
+window.submitGivePetTier = async function(tier, count = 5) {
+  const userId = getAdminTargetUserId();
+  if (!userId) return showAdminAlert('pet', 'error', 'Please select a recipient player.');
+
+  try {
+    const res = await fetch('/api/admin/give-pet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, tier, count })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    if (window.sound?.playWin) window.sound.playWin();
+    showAdminAlert('pet', 'success', data.message);
+    fetchAdminUserExtraDetails(userId);
+
+    if (userId === state.userId || userId === 'web_player') {
+      await loadUserData();
+    }
+  } catch (err) {
+    showAdminAlert('pet', 'error', err.message);
+  }
+};
+
+window.submitGiveSelectedItem = async function() {
+  const userId = getAdminTargetUserId();
+  if (!userId) return showAdminAlert('item', 'error', 'Please select a recipient player.');
+  if (!adminState.selectedItemId) return showAdminAlert('item', 'error', 'Please select an item to give.');
+
+  const qty = parseInt(document.getElementById('admin-item-qty')?.value, 10) || 1;
+  const btn = document.getElementById('btn-submit-give-item');
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/admin/give-item', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, itemId: adminState.selectedItemId, count: qty })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    if (window.sound?.playWin) window.sound.playWin();
+    showAdminAlert('item', 'success', data.message);
+    fetchAdminUserExtraDetails(userId);
+
+    if (userId === state.userId || userId === 'web_player') {
+      await loadUserData();
+    }
+  } catch (err) {
+    showAdminAlert('item', 'error', err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
+window.submitGiveAllCrates = async function(count = 100) {
+  const userId = getAdminTargetUserId();
+  if (!userId) return showAdminAlert('item', 'error', 'Please select a recipient player.');
+
+  try {
+    const res = await fetch('/api/admin/give-item', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, itemId: '__ALL_CRATES__', count })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    if (window.sound?.playWin) window.sound.playWin();
+    showAdminAlert('item', 'success', data.message);
+    fetchAdminUserExtraDetails(userId);
+
+    if (userId === state.userId || userId === 'web_player') {
+      await loadUserData();
+    }
+  } catch (err) {
+    showAdminAlert('item', 'error', err.message);
+  }
+};
+
+window.submitGiveItemDirect = async function(itemId, count = 10) {
+  const userId = getAdminTargetUserId();
+  if (!userId) return showAdminAlert('item', 'error', 'Please select a recipient player.');
+
+  try {
+    const res = await fetch('/api/admin/give-item', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, itemId, count })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    if (window.sound?.playWin) window.sound.playWin();
+    showAdminAlert('item', 'success', data.message);
+    fetchAdminUserExtraDetails(userId);
+
+    if (userId === state.userId || userId === 'web_player') {
+      await loadUserData();
+    }
+  } catch (err) {
+    showAdminAlert('item', 'error', err.message);
+  }
+};
+
+window.submitGiveSelectedWeapon = async function() {
+  const userId = getAdminTargetUserId();
+  if (!userId) return showAdminAlert('weapon', 'error', 'Please select a recipient player.');
+
+  const weaponId = document.getElementById('admin-weapon-select')?.value;
+  const tier = document.getElementById('admin-weapon-tier')?.value || 'legendary';
+  const level = parseInt(document.getElementById('admin-weapon-level')?.value, 10) || 1;
+  const quality = parseFloat(document.getElementById('admin-weapon-quality')?.value) || 85.0;
+  const slot = document.getElementById('admin-weapon-slot')?.value || '';
+
+  const btn = document.getElementById('btn-submit-give-weapon');
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/admin/give-weapon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, weaponId, level, tier, quality, slot })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    if (window.sound?.playWin) window.sound.playWin();
+    showAdminAlert('weapon', 'success', data.message);
+    fetchAdminUserExtraDetails(userId);
+  } catch (err) {
+    showAdminAlert('weapon', 'error', err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
+window.submitGiveAllWeapons = async function(level = 10, tier = 'mythic', quality = 95) {
+  const userId = getAdminTargetUserId();
+  if (!userId) return showAdminAlert('weapon', 'error', 'Please select a recipient player.');
+
+  try {
+    const res = await fetch('/api/admin/give-weapon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, weaponId: '__ALL__', level, tier, quality })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    if (window.sound?.playWin) window.sound.playWin();
+    showAdminAlert('weapon', 'success', data.message);
+    fetchAdminUserExtraDetails(userId);
+  } catch (err) {
+    showAdminAlert('weapon', 'error', err.message);
+  }
+};
+
+window.setAdminCashMode = function(mode) {
+  adminState.cashMode = mode;
+  const btnAdd = document.getElementById('btn-admin-cash-mode-add');
+  const btnSet = document.getElementById('btn-admin-cash-mode-set');
+  if (btnAdd && btnSet) {
+    if (mode === 'add') {
+      btnAdd.classList.add('active');
+      btnSet.classList.remove('active');
+    } else {
+      btnAdd.classList.remove('active');
+      btnSet.classList.add('active');
+    }
+  }
+};
+
+window.setAdminPresetAmount = function(amt) {
+  const input = document.getElementById('admin-cash-amount-input');
+  if (input) input.value = amt;
+};
+
+window.submitAdminGiveCash = async function() {
+  const userId = getAdminTargetUserId();
+  if (!userId) return showAdminAlert('cash', 'error', 'Please select a recipient player.');
+
+  const parsedAmount = Number(document.getElementById('admin-cash-amount-input')?.value);
   if (isNaN(parsedAmount) || parsedAmount < 0) {
-    showCashAlert('error', 'Please enter a valid non-negative number for the amount.');
-    return;
+    return showAdminAlert('cash', 'error', 'Please enter a valid amount.');
   }
 
-  clearCashAlert();
-  if (confirmBtn) {
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Processing...';
-  }
+  const btn = document.getElementById('btn-submit-give-cash');
+  if (btn) btn.disabled = true;
 
   try {
     const res = await fetch('/api/admin/give-cash', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: targetUserId,
-        amount: parsedAmount,
-        mode: adminState.mode
-      })
+      body: JSON.stringify({ userId, amount: parsedAmount, mode: adminState.cashMode })
     });
-
     const data = await res.json();
-    if (!data.success) {
-      throw new Error(data.message || 'Failed to inject cash');
-    }
+    if (!data.success) throw new Error(data.message);
 
-    // Success!
-    if (window.sound && typeof window.sound.playWin === 'function') {
-      window.sound.playWin();
-    }
+    if (window.sound?.playWin) window.sound.playWin();
+    showAdminAlert('cash', 'success', data.message);
+    fetchAdminUserExtraDetails(userId);
 
-    showCashAlert('success', data.message);
-
-    // Update target preview card
-    updateTargetCard(data.user);
-
-    // If target was current web player, update header wallet pill
-    if (data.user.id === state.userId || data.user.id === 'web_player') {
+    if (userId === state.userId || userId === 'web_player') {
       const balEl = document.getElementById('wallet-balance');
       if (balEl) balEl.textContent = `${data.user.cowoncy.toLocaleString()} Cowoncy`;
       await loadUserData();
     }
-
-    // Refresh leaderboards
     await loadLeaderboards();
-
-    // Reload users list with this user active
-    await refreshAdminUsers(data.user.id);
-
   } catch (err) {
-    showCashAlert('error', err.message || 'Failed to communicate with server.');
+    showAdminAlert('cash', 'error', err.message);
   } finally {
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = adminState.mode === 'add' 
-        ? '<span>✨ Inject Cash</span>' 
-        : '<span>🎯 Set Exact Balance</span>';
-    }
+    if (btn) btn.disabled = false;
   }
 };
+
+// Also keep existing Add Cash modal functions working seamlessly
+window.openAddCashModal = function() {
+  openAdminManagerModal('cash');
+};
+
+window.closeAddCashModal = function() {
+  closeAdminManagerModal();
+};
+
+window.onTargetUserChanged = window.onAdminTargetUserChanged;
+window.onCustomIdInput = window.onAdminCustomIdInput;
+window.setCashMode = window.setAdminCashMode;
+window.setPresetAmount = window.setAdminPresetAmount;
+window.submitAddCash = window.submitAdminGiveCash;
+
 

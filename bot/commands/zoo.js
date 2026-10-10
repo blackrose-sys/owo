@@ -359,10 +359,22 @@ module.exports = {
 
     const words = raw.split(/ +/);
     const target = words[0];
-    const newName = words.slice(1).join(' ');
+    const newName = words.slice(1).join(' ').trim();
 
     if (!newName) {
       return message.reply(`❌ Please provide a new nickname for ${target}!`);
+    }
+
+    if (target.toLowerCase() === 'team') {
+      const activeTeamNum = user.active_team || 1;
+      if (activeTeamNum === 2) {
+        db.stmts.setTeamName2.run(newName, user.id);
+        user.team_name_2 = newName;
+      } else {
+        db.stmts.setTeamName.run(newName, user.id);
+        user.team_name = newName;
+      }
+      return message.reply(`🏷️ Renamed Team ${activeTeamNum} to **${newName}**!`);
     }
 
     return message.reply(`✨ Successfully renamed **${target}** to **${newName}**! ${getRandomFace()}`);

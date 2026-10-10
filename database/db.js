@@ -159,6 +159,8 @@ db.exec(`
 
 // Safe migrations for newly added columns
 try { db.exec(`ALTER TABLE users ADD COLUMN active_team INTEGER DEFAULT 1;`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN team_name TEXT DEFAULT NULL;`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN team_name_2 TEXT DEFAULT NULL;`); } catch (e) {}
 try { db.exec(`ALTER TABLE weapons ADD COLUMN code TEXT;`); } catch (e) {}
 try { db.exec(`ALTER TABLE weapons ADD COLUMN quality REAL DEFAULT 50.0;`); } catch (e) {}
 try { db.exec(`ALTER TABLE weapons ADD COLUMN tier TEXT DEFAULT 'common';`); } catch (e) {}
@@ -220,8 +222,19 @@ const stmts = {
   // Weapons
   getUserWeapons: db.prepare('SELECT * FROM weapons WHERE user_id = ? ORDER BY id DESC'),
   getEquippedWeapon: db.prepare('SELECT * FROM weapons WHERE user_id = ? AND is_equipped = 1 LIMIT 1'),
-  unequipAllWeapons: db.prepare('UPDATE weapons SET is_equipped = 0 WHERE user_id = ?'),
-  equipWeapon: db.prepare('UPDATE weapons SET is_equipped = 1 WHERE user_id = ? AND id = ?'),
+  getEquippedWeaponBySlot: db.prepare(`
+    SELECT * FROM weapons 
+    WHERE user_id = ? AND (equipped_to = ? OR (equipped_to IS NULL AND is_equipped = 1 AND ? = 1))
+    LIMIT 1
+  `),
+  getAllEquippedWeapons: db.prepare('SELECT * FROM weapons WHERE user_id = ? AND is_equipped = 1 ORDER BY equipped_to ASC'),
+  unequipAllWeapons: db.prepare('UPDATE weapons SET is_equipped = 0, equipped_to = NULL WHERE user_id = ?'),
+  unequipSlotWeapon: db.prepare(`
+    UPDATE weapons SET is_equipped = 0, equipped_to = NULL 
+    WHERE user_id = ? AND (equipped_to = ? OR (equipped_to IS NULL AND ? = 1))
+  `),
+  equipWeapon: db.prepare('UPDATE weapons SET is_equipped = 1, equipped_to = 1 WHERE user_id = ? AND id = ?'),
+  equipWeaponToSlot: db.prepare('UPDATE weapons SET is_equipped = 1, equipped_to = ? WHERE user_id = ? AND id = ?'),
   addWeapon: db.prepare('INSERT INTO weapons (user_id, weapon_id, level) VALUES (?, ?, 1)'),
   addWeaponFull: db.prepare(`
     INSERT INTO weapons (user_id, weapon_id, level, is_equipped, code, quality, tier)
@@ -233,6 +246,8 @@ const stmts = {
   getTeam: db.prepare('SELECT * FROM team WHERE user_id = ? ORDER BY slot ASC'),
   getTeamByPage: db.prepare('SELECT * FROM team WHERE user_id = ? AND slot BETWEEN ? AND ? ORDER BY slot ASC'),
   setActiveTeam: db.prepare('UPDATE users SET active_team = ? WHERE id = ?'),
+  setTeamName: db.prepare('UPDATE users SET team_name = ? WHERE id = ?'),
+  setTeamName2: db.prepare('UPDATE users SET team_name_2 = ? WHERE id = ?'),
   setTeamSlot: db.prepare(`
     INSERT INTO team (user_id, slot, animal_id, level, xp)
     VALUES (?, ?, ?, 1, 0)
@@ -364,6 +379,40 @@ const dbManager = {
 
   setGuildPrefix(guildId, prefix) {
     stmts.setGuildPrefix.run(guildId, prefix);
+  },
+
+  setTeamName(userId, name, teamNum = 1) {
+    if (teamNum === 2) {
+      stmts.setTeamName2.run(name, userId);
+    } else {
+      stmts.setTeamName.run(name, userId);
+    }
+  },
+
+  getTeamName(userId, teamNum = 1) {
+    const user = stmts.getUser.get(userId);
+    if (!user) return null;
+    return teamNum === 2 ? user.team_name_2 : user.team_name;
+  },
+
+  getEquippedWeapon(userId, slot = 1) {
+    return stmts.getEquippedWeaponBySlot.get(userId, slot, slot);
+  },
+
+  getAllEquippedWeapons(userId) {
+    return stmts.getAllEquippedWeapons.all(userId);
+  },
+
+  equipWeaponToSlot(userId, weaponId, slot = 1) {
+    stmts.unequipSlotWeapon.run(userId, slot, slot);
+    stmts.equipWeaponToSlot.run(slot, userId, weaponId);
+  },
+
+  unequipWeapon(userId, slot = null) {
+    if (slot !== null && slot !== undefined) {
+      return stmts.unequipSlotWeapon.run(userId, slot, slot);
+    }
+    return stmts.unequipAllWeapons.run(userId);
   },
 
   getTopUsers(type = 'cowoncy', limit = 10) {

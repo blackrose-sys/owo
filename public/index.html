@@ -39,7 +39,10 @@
       <div class="user-wallet-pill">
         <span id="wallet-balance">1,000 Cowoncy</span>
       </div>
-      <button id="btn-open-add-cash" class="btn btn-add-cash" onclick="openAddCashModal()" title="Add or set Cowoncy for any user">
+      <button id="btn-open-admin-manager" class="btn btn-admin-manager" onclick="openAdminManagerModal('pets')" title="Admin: Add Pets, Items, Weapons, and Cash">
+        <span>🐾 Admin Panel</span>
+      </button>
+      <button id="btn-open-add-cash" class="btn btn-add-cash" onclick="openAdminManagerModal('cash')" title="Add or set Cowoncy for any user">
         <span>💵 Add Cash</span>
       </button>
       <button id="sound-toggle" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; border-radius: 20px;">🔊</button>
@@ -93,7 +96,15 @@
                 <span>🃏 Higher / Lower (50)</span>
                 <span class="tag">whl</span>
               </button>
-              <button class="action-btn" onclick="openAddCashModal()" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08);">
+              <button class="action-btn" onclick="openAdminManagerModal('pets')" style="border-color: rgba(138, 127, 248, 0.4); background: rgba(138, 127, 248, 0.08);">
+                <span>🐾 Add Any Pet (Admin)</span>
+                <span class="tag" style="background: rgba(138, 127, 248, 0.25); color: #c4b5fd; font-weight: 700;">+Pets</span>
+              </button>
+              <button class="action-btn" onclick="openAdminManagerModal('items')" style="border-color: rgba(0, 229, 255, 0.4); background: rgba(0, 229, 255, 0.08);">
+                <span>🎁 Add Items/Gear (Admin)</span>
+                <span class="tag" style="background: rgba(0, 229, 255, 0.25); color: #67e8f9; font-weight: 700;">+Gear</span>
+              </button>
+              <button class="action-btn" onclick="openAdminManagerModal('cash')" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08);">
                 <span>💵 Add Cash (Admin)</span>
                 <span class="tag" style="background: rgba(16, 185, 129, 0.25); color: #34d399; font-weight: 700;">+Cash</span>
               </button>
@@ -159,6 +170,15 @@
 
     <!-- Tab 2: Zoo Compendium -->
     <section id="tab-zoo" class="tab-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h2 style="font-size: 1.5rem; margin-bottom: 0.25rem;">🐾 Zoo Compendium</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Browse all 80+ animal species or grant pets directly to any player.</p>
+        </div>
+        <button class="btn btn-admin-banner" onclick="openAdminManagerModal('pets')">
+          <span>✨ Give Any Pet to Player (Admin)</span>
+        </button>
+      </div>
       <div class="zoo-controls">
         <button class="filter-pill active" data-filter="all">All Animals</button>
         <button class="filter-pill" data-filter="owned">Only Owned</button>
@@ -196,9 +216,14 @@
 
     <!-- Tab 4: Shop -->
     <section id="tab-shop" class="tab-content">
-      <div style="margin-bottom: 1.5rem;">
-        <h2 style="font-size: 1.5rem; margin-bottom: 0.35rem;">🛍️ OwO Emporium</h2>
-        <p style="color: var(--text-muted);">Spend your Cowoncy on powerups, mystery crates, and marriage rings!</p>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h2 style="font-size: 1.5rem; margin-bottom: 0.25rem;">🛍️ OwO Emporium</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Spend your Cowoncy on powerups, mystery crates, and marriage rings!</p>
+        </div>
+        <button class="btn btn-admin-banner" onclick="openAdminManagerModal('items')">
+          <span>✨ Inject Items / Crates (Admin)</span>
+        </button>
       </div>
       <div id="shop-grid" style="display: flex; flex-direction: column; gap: 1rem;">
         <!-- Dynamically populated -->
@@ -245,6 +270,302 @@
     </section>
 
   </main>
+
+  <!-- Master Admin Injector Modal (Pets, Items, Weapons & Economy) -->
+  <div id="modal-admin-manager" class="modal-backdrop" style="display: none;">
+    <div class="modal-window admin-modal-window">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge" style="background: rgba(138, 127, 248, 0.2); border-color: rgba(138, 127, 248, 0.5); box-shadow: 0 0 15px rgba(138, 127, 248, 0.3);">🐾</div>
+          <div>
+            <h3 class="modal-title">Admin Master Injector</h3>
+            <p class="modal-subtitle">Add any pets, crates, items, weapons, or cowoncy to any Discord or Web account</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeAdminManagerModal()">&times;</button>
+      </div>
+
+      <div class="modal-body admin-modal-body">
+        <!-- Target User Selection (Global Across All Tabs) -->
+        <div class="admin-user-selector-box">
+          <div class="form-group" style="margin-bottom: 0.6rem;">
+            <label class="form-label" for="admin-user-select">
+              👤 Target Player (Who receives the items / pets?)
+            </label>
+            <select id="admin-user-select" class="form-control form-select" onchange="onAdminTargetUserChanged()">
+              <option value="" disabled>Loading registered players...</option>
+            </select>
+          </div>
+
+          <!-- Custom User ID Input -->
+          <div id="admin-custom-user-group" class="form-group" style="display: none; margin-bottom: 0.6rem;">
+            <label class="form-label" for="admin-custom-id">
+              🆔 Custom Discord User ID
+            </label>
+            <input type="text" id="admin-custom-id" class="form-control" placeholder="e.g. 370485038879604738" oninput="onAdminCustomIdInput()" />
+            <span class="form-hint">Paste any Discord User ID (automatically creates account in DB if new)</span>
+          </div>
+
+          <!-- User Stats Preview Card -->
+          <div id="admin-target-user-card" class="target-user-card admin-target-card">
+            <div class="target-avatar" id="admin-target-user-avatar">🐶</div>
+            <div class="target-details">
+              <div class="target-name" id="admin-target-user-name">Loading player...</div>
+              <div class="target-id" id="admin-target-user-id">ID: —</div>
+            </div>
+            <div class="admin-badges-wrap">
+              <div class="admin-stat-pill" title="Cowoncy Balance">
+                <span class="pill-label">🪙 Cowoncy</span>
+                <span class="pill-val" id="admin-target-bal">0</span>
+              </div>
+              <div class="admin-stat-pill" title="Zoo Animals Owned">
+                <span class="pill-label">🐾 Pets</span>
+                <span class="pill-val" id="admin-target-zoo-count">0</span>
+              </div>
+              <div class="admin-stat-pill" title="Weapons Owned">
+                <span class="pill-label">⚔️ Weapons</span>
+                <span class="pill-val" id="admin-target-weapon-count">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin Tabs Navigation -->
+        <div class="admin-tab-nav">
+          <button type="button" class="admin-tab-btn active" data-admin-tab="pets" onclick="switchAdminTab('pets')">
+            <span>🐾 Pets & Zoo</span>
+          </button>
+          <button type="button" class="admin-tab-btn" data-admin-tab="items" onclick="switchAdminTab('items')">
+            <span>🎒 Items & Crates</span>
+          </button>
+          <button type="button" class="admin-tab-btn" data-admin-tab="weapons" onclick="switchAdminTab('weapons')">
+            <span>⚔️ Weapons</span>
+          </button>
+          <button type="button" class="admin-tab-btn" data-admin-tab="cash" onclick="switchAdminTab('cash')">
+            <span>💵 Cowoncy Cash</span>
+          </button>
+        </div>
+
+        <!-- Tab 1: Pets & Zoo -->
+        <div id="admin-pane-pets" class="admin-tab-pane active">
+          <!-- Quick 1-Click Mass Unlocks -->
+          <div class="admin-quick-row">
+            <button type="button" class="admin-batch-btn gold-glow" onclick="submitGivePetAll(1)">
+              <span>🌟 Unlock Entire Zoo (1x All 80+ Pets)</span>
+            </button>
+            <button type="button" class="admin-batch-btn purple-glow" onclick="submitGivePetTier('mythic', 5)">
+              <span>🔥 Unlock All Mythic Pets (5x)</span>
+            </button>
+            <button type="button" class="admin-batch-btn cyan-glow" onclick="submitGivePetTier('gem', 5)">
+              <span>💎 Unlock All Gem / Special Pets (5x)</span>
+            </button>
+          </div>
+
+          <!-- Tier Filter & Search Bar -->
+          <div class="admin-filter-bar">
+            <div class="admin-tier-pills">
+              <button type="button" class="admin-pill active" data-pet-filter="all" onclick="filterAdminPets('all')">All</button>
+              <button type="button" class="admin-pill" data-pet-filter="common" onclick="filterAdminPets('common')">Common</button>
+              <button type="button" class="admin-pill" data-pet-filter="uncommon" onclick="filterAdminPets('uncommon')">Uncommon</button>
+              <button type="button" class="admin-pill" data-pet-filter="rare" onclick="filterAdminPets('rare')">Rare</button>
+              <button type="button" class="admin-pill" data-pet-filter="epic" onclick="filterAdminPets('epic')">Epic</button>
+              <button type="button" class="admin-pill" data-pet-filter="mythic" onclick="filterAdminPets('mythic')">Mythic</button>
+              <button type="button" class="admin-pill" data-pet-filter="legendary" onclick="filterAdminPets('legendary')">Legendary</button>
+              <button type="button" class="admin-pill" data-pet-filter="fabled" onclick="filterAdminPets('fabled')">Fabled</button>
+              <button type="button" class="admin-pill" data-pet-filter="gem" onclick="filterAdminPets('gem')">Gem</button>
+            </div>
+            <div class="admin-search-wrap">
+              <input type="text" id="admin-pet-search" class="form-control admin-search-input" placeholder="🔍 Search animal (e.g. dragon, kitsune, wolf, fox)..." oninput="onAdminPetSearch()" />
+            </div>
+          </div>
+
+          <!-- Pet Cards Grid -->
+          <div id="admin-pet-grid" class="admin-item-grid pet-select-grid">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Quantity Controls & Submit -->
+          <div class="admin-action-row">
+            <div class="admin-qty-wrap">
+              <label class="form-label">🔢 Quantity to Give:</label>
+              <div class="qty-inputs">
+                <input type="number" id="admin-pet-qty" class="form-control qty-number-input" value="1" min="1" max="10000" />
+                <div class="preset-chips-inline">
+                  <button type="button" class="preset-chip-sm" onclick="setAdminPetQty(1)">1</button>
+                  <button type="button" class="preset-chip-sm" onclick="setAdminPetQty(5)">5</button>
+                  <button type="button" class="preset-chip-sm" onclick="setAdminPetQty(10)">10</button>
+                  <button type="button" class="preset-chip-sm" onclick="setAdminPetQty(50)">50</button>
+                  <button type="button" class="preset-chip-sm" onclick="setAdminPetQty(100)">100</button>
+                  <button type="button" class="preset-chip-sm" onclick="setAdminPetQty(1000)">1,000</button>
+                </div>
+              </div>
+            </div>
+            <button type="button" id="btn-submit-give-pet" class="btn btn-give-primary" onclick="submitGiveSelectedPet()">
+              <span>🐾 Give Selected Pet</span>
+            </button>
+          </div>
+          <div id="admin-pet-alert" class="modal-status-alert" style="display: none;"></div>
+        </div>
+
+        <!-- Tab 2: Items & Crates -->
+        <div id="admin-pane-items" class="admin-tab-pane">
+          <div class="admin-quick-row">
+            <button type="button" class="admin-batch-btn gold-glow" onclick="submitGiveAllCrates(100)">
+              <span>📦 Give 100x All Mystery Crates (Common, Rare, Armory)</span>
+            </button>
+            <button type="button" class="admin-batch-btn cyan-glow" onclick="submitGiveItemDirect('gem_luck', 50)">
+              <span>💎 Give 50x Luck Gems</span>
+            </button>
+            <button type="button" class="admin-batch-btn purple-glow" onclick="submitGiveItemDirect('bait', 50)">
+              <span>🥩 Give 50x Golden Bait</span>
+            </button>
+            <button type="button" class="admin-batch-btn pink-glow" onclick="submitGiveItemDirect('ring', 10)">
+              <span>💍 Give 10x Love Rings</span>
+            </button>
+          </div>
+
+          <div id="admin-item-grid" class="admin-item-grid">
+            <!-- Dynamically populated -->
+          </div>
+
+          <div class="admin-action-row">
+            <div class="admin-qty-wrap">
+              <label class="form-label">🔢 Quantity to Give:</label>
+              <div class="qty-inputs">
+                <input type="number" id="admin-item-qty" class="form-control qty-number-input" value="10" min="1" max="10000" />
+                <div class="preset-chips-inline">
+                  <button type="button" class="preset-chip-sm" onclick="setAdminItemQty(1)">1</button>
+                  <button type="button" class="preset-chip-sm" onclick="setAdminItemQty(10)">10</button>
+                  <button type="button" class="preset-chip-sm" onclick="setAdminItemQty(50)">50</button>
+                  <button type="button" class="preset-chip-sm" onclick="setAdminItemQty(100)">100</button>
+                </div>
+              </div>
+            </div>
+            <button type="button" id="btn-submit-give-item" class="btn btn-give-primary" onclick="submitGiveSelectedItem()">
+              <span>🎁 Give Selected Item</span>
+            </button>
+          </div>
+          <div id="admin-item-alert" class="modal-status-alert" style="display: none;"></div>
+        </div>
+
+        <!-- Tab 3: Weapons Armory -->
+        <div id="admin-pane-weapons" class="admin-tab-pane">
+          <div class="admin-quick-row">
+            <button type="button" class="admin-batch-btn purple-glow" onclick="submitGiveAllWeapons(10, 'mythic', 95)">
+              <span>👑 Give ALL Weapons (Lv.10, Mythic, 95% Quality)</span>
+            </button>
+          </div>
+
+          <div class="weapon-form-row">
+            <div class="form-group" style="flex: 2;">
+              <label class="form-label" for="admin-weapon-select">⚔️ Select Weapon Base:</label>
+              <select id="admin-weapon-select" class="form-control form-select" onchange="updateAdminWeaponBuildHint()">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="admin-weapon-tier">🏆 Tier Rank:</label>
+              <select id="admin-weapon-tier" class="form-control form-select">
+                <option value="mythic">Mythic [M]</option>
+                <option value="legendary" selected>Legendary [L]</option>
+                <option value="epic">Epic [E]</option>
+                <option value="rare">Rare [R]</option>
+                <option value="uncommon">Uncommon [U]</option>
+                <option value="common">Common [C]</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="admin-weapon-level">⭐ Level (1-100):</label>
+              <input type="number" id="admin-weapon-level" class="form-control" value="20" min="1" max="100" />
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="admin-weapon-quality">✨ Quality % (1-100):</label>
+              <input type="number" id="admin-weapon-quality" class="form-control" value="85" min="1" max="100" step="0.1" />
+            </div>
+            <div class="form-group" style="flex: 1.5;">
+              <label class="form-label" for="admin-weapon-slot">🎯 Dedicated Slot:</label>
+              <select id="admin-weapon-slot" class="form-control form-select">
+                <option value="">Keep in Armory (Unequipped)</option>
+                <option value="1">Slot 1 (Lead / Tank)</option>
+                <option value="2">Slot 2 (Middle / Mage)</option>
+                <option value="3">Slot 3 (Back / DPS)</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="admin-weapon-build-hint" style="font-size: 0.85rem; color: var(--accent-cyan); margin: 0.5rem 0; padding: 0.5rem 0.75rem; background: rgba(0,229,255,0.06); border-radius: 6px; border: 1px solid rgba(0,229,255,0.2);">
+            <!-- Build synergy preview hint -->
+          </div>
+
+          <button type="button" id="btn-submit-give-weapon" class="btn btn-give-primary" style="margin-top: 0.5rem; width: 100%;" onclick="submitGiveSelectedWeapon()">
+            <span>⚔️ Forge & Inject Weapon into Armory</span>
+          </button>
+          <div id="admin-weapon-alert" class="modal-status-alert" style="display: none; margin-top: 0.75rem;"></div>
+
+          <div id="admin-user-weapons-container" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <h4 style="font-size: 1rem; color: #fff;">🗡️ Player's Current Armory & Equipped Weapons</h4>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="refreshAdminUserDetails()">🔄 Refresh</button>
+            </div>
+            <div id="admin-user-weapons-list" class="admin-item-grid" style="max-height: 220px; overflow-y: auto;">
+              <!-- User's current weapons with 1-click equip/unequip -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Cowoncy Cash -->
+        <div id="admin-pane-cash" class="admin-tab-pane">
+          <div class="form-group">
+            <label class="form-label">⚙️ Operation Mode</label>
+            <div class="mode-toggle-group">
+              <button type="button" class="mode-btn active" id="btn-admin-cash-mode-add" onclick="setAdminCashMode('add')">
+                <span class="mode-icon">➕</span>
+                <span class="mode-text">Add to Balance</span>
+              </button>
+              <button type="button" class="mode-btn" id="btn-admin-cash-mode-set" onclick="setAdminCashMode('set')">
+                <span class="mode-icon">🎯</span>
+                <span class="mode-text">Set Exact Balance</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="admin-cash-amount-input">
+              💰 Cowoncy Amount
+            </label>
+            <div class="input-with-currency">
+              <span class="currency-symbol">🪙</span>
+              <input type="number" id="admin-cash-amount-input" class="form-control input-amount" placeholder="Enter amount..." min="0" value="1000000" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">⚡ Quick Presets</label>
+            <div class="preset-chips-grid">
+              <button type="button" class="preset-chip" onclick="setAdminPresetAmount(50000)">+50k</button>
+              <button type="button" class="preset-chip" onclick="setAdminPresetAmount(100000)">+100k</button>
+              <button type="button" class="preset-chip" onclick="setAdminPresetAmount(500000)">+500k</button>
+              <button type="button" class="preset-chip" onclick="setAdminPresetAmount(1000000)">+1M</button>
+              <button type="button" class="preset-chip" onclick="setAdminPresetAmount(10000000)">+10M</button>
+              <button type="button" class="preset-chip" onclick="setAdminPresetAmount(50000000)">+50M</button>
+              <button type="button" class="preset-chip" onclick="setAdminPresetAmount(100000000)">+100M</button>
+              <button type="button" class="preset-chip" onclick="setAdminPresetAmount(1000000000000)">+1 Trillion</button>
+            </div>
+          </div>
+
+          <button type="button" id="btn-submit-give-cash" class="btn btn-give-primary" style="margin-top: 1rem; width: 100%;" onclick="submitAdminGiveCash()">
+            <span>✨ Inject Cowoncy</span>
+          </button>
+          <div id="admin-cash-alert" class="modal-status-alert" style="display: none; margin-top: 0.75rem;"></div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeAdminManagerModal()">Close</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Add Cash / Admin Economy Modal -->
   <div id="modal-add-cash" class="modal-backdrop" style="display: none;">

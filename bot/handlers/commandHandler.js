@@ -94,6 +94,8 @@ const COMMANDS = {
   owotm: battle.team,
   wtm: battle.team,
   wt: battle.team,
+  teamrename: (message, args, user) => battle.team(message, ['rename', ...args], user),
+  wteamrename: (message, args, user) => battle.team(message, ['rename', ...args], user),
   setteam: (message, args, user) => {
     const num = parseInt(args[0], 10) || 1;
     if (num < 1 || num > 2) return message.reply('❌ Team number must be 1 or 2! Usage: `owo setteam <1/2>`');
@@ -116,6 +118,8 @@ const COMMANDS = {
   wequip: battle.equip,
   eq: battle.equip,
   we: battle.equip,
+  unequip: (message, args, user) => battle.equip(message, ['unequip', ...args], user),
+  wunequip: (message, args, user) => battle.equip(message, ['unequip', ...args], user),
   dismantle: battle.dismantle,
   boss: battle.boss,
   wboss: battle.boss,
