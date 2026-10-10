@@ -1,8 +1,20 @@
+const path = require('path');
+const fs = require('fs');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, AttachmentBuilder } = require('discord.js');
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const GIFEncoder = require('gif-encoder-2');
 const db = require('../../database/db');
 const { getRandomFace, owoify, getActionGif } = require('../../database/data/dialogue');
+
+// Register bundled fonts so text renders reliably across all environments (including Linux Docker on Railway)
+try {
+  const fontMono = path.join(__dirname, '..', '..', 'assets', 'fonts', 'CourierPrime-Bold.ttf');
+  const fontSans = path.join(__dirname, '..', '..', 'assets', 'fonts', 'Roboto.ttf');
+  if (fs.existsSync(fontMono)) GlobalFonts.registerFromPath(fontMono, 'AmongUsMono');
+  if (fs.existsSync(fontSans)) GlobalFonts.registerFromPath(fontSans, 'AmongUsSans');
+} catch (e) {
+  console.error('[Eject Font Registration Error]:', e);
+}
 
 module.exports = {
   marry: async (message, args, user) => {
@@ -345,51 +357,49 @@ module.exports = {
     const isImpostor = Math.random() < 0.5;
 
     try {
-      const width = 500;
-      const height = 280;
+      const width = 450;
+      const height = 250;
 
       const encoder = new GIFEncoder(width, height, 'octree', false);
       encoder.start();
       encoder.setRepeat(0);
-      encoder.setDelay(80);
+      encoder.setDelay(75);
       encoder.setQuality(10);
 
       const canvas = createCanvas(width, height);
       const ctx = canvas.getContext('2d');
 
-      // Pre-generate fixed star positions
+      // Pre-generate stars
       const stars = [];
-      for (let i = 0; i < 80; i++) {
+      for (let i = 0; i < 85; i++) {
         stars.push({
           x: Math.random() * width,
           y: Math.random() * height,
-          r: Math.random() < 0.2 ? 2 : 1,
+          r: Math.random() < 0.2 ? 2.2 : Math.random() < 0.6 ? 1.5 : 1,
           alpha: 0.3 + Math.random() * 0.7,
-          speed: 0.5 + Math.random() * 1.5
+          speed: 0.6 + Math.random() * 1.8
         });
       }
 
-      // Preload avatar
+      // Preload target avatar
       let avatarImg = null;
       try {
         avatarImg = await loadImage(targetAvatar);
       } catch (e) {}
 
-      const suitColor = isImpostor ? '#c62828' : '#1565c0';
-      const shadowColor = isImpostor ? '#8e0000' : '#0d47a1';
       const fullMainText = `${target.username} was ${isImpostor ? 'An Impostor.' : 'not An Impostor.'}`;
       const fullSubText = isImpostor ? '0 Impostors remain.' : '1 Impostor remains.';
-      const totalFrames = 22;
-      const scale = 0.65;
+      const totalFrames = 26;
+      const avatarSize = 65;
 
       for (let f = 0; f < totalFrames; f++) {
         const progress = f / (totalFrames - 1);
 
-        // 1. Black Space Background
+        // 1. Deep Space Background
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, width, height);
 
-        // 2. Moving Stars (scroll left)
+        // 2. Stars scrolling left
         for (const star of stars) {
           star.x -= star.speed;
           if (star.x < 0) star.x = width;
@@ -399,65 +409,76 @@ module.exports = {
           ctx.fill();
         }
 
-        // 3. Crewmate floating across screen & spinning
-        const astroX = -50 + progress * (width + 100);
-        const astroY = height * 0.45 + Math.sin(progress * Math.PI * 2) * 15;
-        const rotation = progress * Math.PI * 4;
+        // 3. Spinning & Floating Avatar across screen
+        const avatarX = -60 + progress * (width + 120);
+        const avatarY = height * 0.40 + Math.sin(progress * Math.PI * 2) * 18;
+        const rotation = progress * Math.PI * 3.5;
 
         ctx.save();
-        ctx.translate(astroX, astroY);
+        ctx.translate(avatarX, avatarY);
         ctx.rotate(rotation);
 
-        // Backpack
-        ctx.fillStyle = shadowColor;
-        ctx.fillRect(-50 * scale, -22 * scale, 22 * scale, 44 * scale);
-
-        // Body
-        ctx.fillStyle = suitColor;
-        ctx.beginPath();
-        ctx.arc(0, 0, 30 * scale, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Visor with Avatar
-        const visorW = 40 * scale;
-        const visorH = 26 * scale;
-        const visorX = 4 * scale;
-        const visorY = -12 * scale;
-
-        ctx.fillStyle = '#64b5f6';
-        ctx.beginPath();
-        ctx.ellipse(visorX, visorY, visorW / 2 + 2, visorH / 2 + 2, 0, 0, Math.PI * 2);
-        ctx.fill();
-
         if (avatarImg) {
+          const r = 16;
           ctx.save();
           ctx.beginPath();
-          ctx.ellipse(visorX, visorY, visorW / 2, visorH / 2, 0, 0, Math.PI * 2);
+          ctx.moveTo(-avatarSize / 2 + r, -avatarSize / 2);
+          ctx.arcTo(avatarSize / 2, -avatarSize / 2, avatarSize / 2, avatarSize / 2, r);
+          ctx.arcTo(avatarSize / 2, avatarSize / 2, -avatarSize / 2, avatarSize / 2, r);
+          ctx.arcTo(-avatarSize / 2, avatarSize / 2, -avatarSize / 2, -avatarSize / 2, r);
+          ctx.arcTo(-avatarSize / 2, -avatarSize / 2, avatarSize / 2, -avatarSize / 2, r);
+          ctx.closePath();
           ctx.clip();
-          ctx.drawImage(avatarImg, visorX - visorW / 2, visorY - visorH / 2, visorW, visorH);
+          ctx.drawImage(avatarImg, -avatarSize / 2, -avatarSize / 2, avatarSize, avatarSize);
+          ctx.restore();
+
+          // Border
+          ctx.save();
+          ctx.strokeStyle = isImpostor ? 'rgba(255, 75, 75, 0.85)' : 'rgba(100, 180, 255, 0.85)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(-avatarSize / 2 + r, -avatarSize / 2);
+          ctx.arcTo(avatarSize / 2, -avatarSize / 2, avatarSize / 2, avatarSize / 2, r);
+          ctx.arcTo(avatarSize / 2, avatarSize / 2, -avatarSize / 2, avatarSize / 2, r);
+          ctx.arcTo(-avatarSize / 2, avatarSize / 2, -avatarSize / 2, -avatarSize / 2, r);
+          ctx.arcTo(-avatarSize / 2, -avatarSize / 2, avatarSize / 2, -avatarSize / 2, r);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          ctx.fillStyle = '#ff4d4d';
+          ctx.beginPath();
+          ctx.arc(0, 0, avatarSize / 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // 4. Center Among Us Text (Typewriter Effect)
+        const startFrame = 3;
+        const endFrame = 19;
+        let charsCount = 0;
+        if (f >= startFrame) {
+          const typeProgress = Math.min((f - startFrame) / (endFrame - startFrame), 1.0);
+          charsCount = Math.floor(typeProgress * fullMainText.length);
+        }
+        const currentText = fullMainText.substring(0, charsCount);
+
+        if (currentText.length > 0) {
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          ctx.font = '22px AmongUsMono, AmongUsSans, monospace, sans-serif';
+          ctx.fillStyle = isImpostor ? '#ff5555' : '#ffffff';
+          ctx.fillText(currentText, width / 2, height / 2 - 12);
+
+          if (charsCount >= fullMainText.length && f >= endFrame) {
+            ctx.font = '16px AmongUsMono, AmongUsSans, monospace, sans-serif';
+            ctx.fillStyle = '#aaaaaa';
+            ctx.fillText(fullSubText, width / 2, height / 2 + 22);
+          }
           ctx.restore();
         }
-
-        ctx.restore();
-
-        // 4. Text with typewriter effect
-        const charsToShow = Math.floor(progress * (fullMainText.length + 8));
-        const currentMainText = fullMainText.substring(0, Math.min(charsToShow, fullMainText.length));
-
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        ctx.font = 'bold 20px "Courier New", monospace, sans-serif';
-        ctx.fillStyle = isImpostor && progress > 0.6 ? '#ff4d4d' : '#ffffff';
-        ctx.fillText(currentMainText, width / 2, height / 2 - 10);
-
-        if (charsToShow >= fullMainText.length + 2) {
-          ctx.font = '15px "Courier New", monospace, sans-serif';
-          ctx.fillStyle = '#b0b0b0';
-          ctx.fillText(fullSubText, width / 2, height / 2 + 25);
-        }
-        ctx.restore();
 
         encoder.addFrame(ctx);
       }
