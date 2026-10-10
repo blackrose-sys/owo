@@ -182,6 +182,10 @@ module.exports = {
       highfive: '🙌', wave: '👋', greet: '🌟', handholding: '💑', hold: '💑',
       tickle: '🤗', kill: '💀', boop: '👃', snuggle: '🐻', bully: '😈',
       dambi: '💥', lewd: '🙈',
+      headpat: '🐾', spongebobchicken: '🐔', zombie: '🧟', bonk: '🔨',
+      yeet: '🚀', facepalm: '🤦', dab: '💫', nuzzle: '🥰',
+      glomp: '🤗', tackle: '🏈', chase: '🏃', pounce: '🐱',
+      beg: '🥺', whine: '😩', growl: '😤',
       blush: '😳', cry: '😢', dance: '💃', smile: '😊', pout: '😤',
       shrug: '🤷', sleepy: '😴', smug: '😏', thumbsup: '👍', thumbs: '👍',
       wag: '🐕', thinking: '🤔', thonking: '🤔', triggered: '😡',
@@ -196,7 +200,8 @@ module.exports = {
     const SOLO_ACTIONS = [
       'blush', 'cry', 'dance', 'smile', 'pout', 'shrug', 'sleepy', 'smug', 
       'thumbsup', 'thumbs', 'wag', 'thinking', 'thonking', 'triggered', 
-      'teehee', 'deredere', 'scoff', 'happy', 'grin', 'lewd'
+      'teehee', 'deredere', 'scoff', 'happy', 'grin', 'lewd',
+      'spongebobchicken', 'zombie', 'dab', 'facepalm'
     ];
 
     if (!target && SOLO_ACTIONS.includes(actionName)) {
@@ -220,7 +225,11 @@ module.exports = {
         scoff: `${message.author.username} scoffed! As if!`,
         happy: `${message.author.username} is super happy! ヽ(>∀<☆)ノ`,
         grin: `${message.author.username} grins mischievously! (¬‿¬)`,
-        lewd: `${message.author.username} thinks that is WAY TOO LEWD! (*/ω＼*)`
+        lewd: `${message.author.username} thinks that is WAY TOO LEWD! (*/ω＼*)`,
+        spongebobchicken: `${message.author.username} dOeS tHe SpOnGeBoB cHiCkEn MoCkInG dAnCe! 🐔🧽`,
+        zombie: `${message.author.username} rises from the grave! 🧟 *BRAAAAAINS~*`,
+        dab: `${message.author.username} hits the hardest dab ever! 💫`,
+        facepalm: `${message.author.username} facepalms so hard it echoes... 🤦`
       };
       embed.setAuthor({
         name: `${emoji} ${soloPhrases[actionName] || `${message.author.username} is ${actionName}ing!`}`,
@@ -241,6 +250,7 @@ module.exports = {
       kiss: `${message.author.username} gives ${tName} a tender kiss! 💕`,
       pat: `${message.author.username} gives ${tName} gentle headpats!`,
       pats: `${message.author.username} gives ${tName} gentle headpats!`,
+      headpat: `${message.author.username} gives ${tName} the softest headpats! 🐾✨`,
       slap: `${message.author.username} slaps ${tName}! Ouch!`,
       cuddle: `${message.author.username} cuddles up close with ${tName}!`,
       poke: `${message.author.username} pokes ${tName}! Hey!`,
@@ -258,7 +268,21 @@ module.exports = {
       snuggle: `${message.author.username} snuggles affectionately with ${tName}!`,
       bully: `${message.author.username} bullies ${tName}! Mean! >:3`,
       dambi: target ? `${message.author.username} gives ${tName} a solid dambi! (💥 Aray ko!)` : `${message.author.username} hits the Malupiton dambi pose! 💥`,
-      lewd: `${message.author.username} points at ${tName}: THAT'S WAY TOO LEWD! (*/ω＼*)`
+      lewd: `${message.author.username} points at ${tName}: THAT'S WAY TOO LEWD! (*/ω＼*)`,
+      spongebobchicken: `${message.author.username} mOcKs ${tName} wItH tHe SpOnGeBoB cHiCkEn! 🐔🧽`,
+      zombie: `${message.author.username} rises as a zombie and chases ${tName}! 🧟 BRAAAAAINS!`,
+      bonk: `${message.author.username} BONKS ${tName} on the head! 🔨 Go to horny jail!`,
+      yeet: `${message.author.username} YEETS ${tName} into the stratosphere! 🚀`,
+      facepalm: `${message.author.username} facepalms at ${tName}... 🤦`,
+      dab: `${message.author.username} dabs on ${tName}! 💫`,
+      nuzzle: `${message.author.username} nuzzles ${tName} affectionately! 🥰`,
+      glomp: `${message.author.username} glomps ${tName}! *TACKLE HUG* 🤗`,
+      tackle: `${message.author.username} tackles ${tName} to the ground! 🏈`,
+      chase: `${message.author.username} chases ${tName} around! 🏃💨`,
+      pounce: `${message.author.username} pounces on ${tName}! Gotcha! 🐱`,
+      beg: `${message.author.username} begs ${tName} with puppy eyes! 🥺 Pwease~`,
+      whine: `${message.author.username} whines at ${tName}! Pay attention to me! 😩`,
+      growl: `${message.author.username} growls at ${tName}! Grrr! 😤`
     };
 
     embed.setAuthor({

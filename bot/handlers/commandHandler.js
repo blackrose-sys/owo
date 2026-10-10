@@ -174,6 +174,9 @@ const SOCIAL_ACTIONS = [
   'dambi', 'punch', 'sex', 'dogstyle', 'doggystyle', 'hug', 'kiss', 'pat', 'pats', 'slap', 'bite', 'cuddle',
   'poke', 'lick', 'nom', 'stare', 'highfive', 'wave', 'greet', 'handholding',
   'hold', 'tickle', 'kill', 'boop', 'snuggle', 'bully',
+  // Added missing action commands
+  'headpat', 'spongebobchicken', 'zombie', 'bonk', 'yeet', 'facepalm', 'dab',
+  'nuzzle', 'glomp', 'tackle', 'chase', 'pounce', 'beg', 'whine', 'growl',
   // Emotes & Expressions
   'blush', 'cry', 'dance', 'smile', 'pout', 'shrug', 'sleepy', 'smug',
   'thumbsup', 'thumbs', 'wag', 'thinking', 'thonking', 'triggered',

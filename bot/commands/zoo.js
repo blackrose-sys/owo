@@ -118,7 +118,7 @@ module.exports = {
     for (const animal of ANIMALS) {
       const count = zooMap.get(animal.id);
       if (count && count > 0) {
-        grouped[animal.tier].push(`${animal.emoji} \`x${count}\``);
+        grouped[animal.tier].push(`${animal.emoji} **${animal.name}** \`x${count}\``);
       }
     }
 

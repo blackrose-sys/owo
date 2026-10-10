@@ -32,11 +32,234 @@ const MONSTERS = [
 ];
 
 module.exports = {
-  // --- 1. BATTLE COMMAND (Matches Screenshot 5 with Canvas Visual) ---
+  // --- 1. BATTLE COMMAND (PvE + PvP when mentioning @user) ---
   battle: async (message, args, user) => {
     const cd = checkCooldown(user.id, 'battle', 15);
     if (cd) return message.reply(`⏰ Your team is recovering! Wait **${cd}s** before battling again ${getRandomFace()}`);
 
+    // --- PvP Detection: check if user mentioned another player ---
+    let pvpTarget = null;
+    if (message.mentions?.users) {
+      if (typeof message.mentions.users.first === 'function') {
+        pvpTarget = message.mentions.users.first();
+      } else if (typeof message.mentions.users.values === 'function') {
+        pvpTarget = message.mentions.users.values().next().value;
+      }
+    }
+    // Also check if args have a raw user ID
+    if (!pvpTarget && args[0]) {
+      const cleanId = args[0].replace(/[<@!>]/g, '').trim();
+      if (/^\d{17,20}$/.test(cleanId) && cleanId !== user.id) {
+        try {
+          if (message.client?.users?.cache?.has(cleanId)) {
+            pvpTarget = message.client.users.cache.get(cleanId);
+          } else if (typeof message.client?.users?.fetch === 'function') {
+            pvpTarget = await message.client.users.fetch(cleanId);
+          }
+        } catch (e) {}
+      }
+    }
+
+    // Filter out self-battles
+    if (pvpTarget && pvpTarget.id === message.author.id) {
+      pvpTarget = null;
+    }
+    if (pvpTarget && pvpTarget.bot) {
+      return message.reply(`❌ You can't battle a bot! Challenge a real player! ${getRandomFace()}`);
+    }
+
+    // ========== PvP BATTLE ==========
+    if (pvpTarget) {
+      const targetUser = db.getUser(pvpTarget.id, pvpTarget.username, typeof pvpTarget.displayAvatarURL === 'function' ? pvpTarget.displayAvatarURL() : '');
+      
+      // Helper to load a user's team with stats
+      function loadTeam(userId, userData) {
+        const activeTeamNum = userData.active_team || 1;
+        const minSlot = (activeTeamNum - 1) * 3 + 1;
+        const maxSlot = activeTeamNum * 3;
+        let teamSlots = db.stmts.getTeamByPage ? db.stmts.getTeamByPage.all(userId, minSlot, maxSlot) : [];
+        
+        if (teamSlots.length === 0) {
+          teamSlots = db.stmts.getTeam.all(userId).filter(t => t.slot <= 3);
+        }
+        
+        // Auto-populate if empty
+        if (teamSlots.length === 0) {
+          const zooList = db.getZoo(userId);
+          if (zooList.length === 0) return [];
+          for (let i = 0; i < Math.min(3, zooList.length); i++) {
+            db.stmts.setTeamSlot.run(userId, i + 1, zooList[i].animal_id);
+          }
+          teamSlots = db.stmts.getTeam.all(userId).filter(t => t.slot <= 3);
+        }
+        
+        const pets = [];
+        for (let i = 0; i < 3; i++) {
+          const targetSlot = (activeTeamNum - 1) * 3 + (i + 1);
+          const member = teamSlots.find(t => t.slot === targetSlot) || teamSlots[i];
+          const slotWeapon = db.getEquippedWeapon(userId, targetSlot) || null;
+          const weaponData = slotWeapon ? getWeaponById(slotWeapon.weapon_id) : null;
+          
+          if (member) {
+            const animal = getAnimalById(member.animal_id) || ANIMALS[0];
+            const lvl = member.level || 1;
+            const levelMultiplier = 1 + (lvl - 1) * 0.15;
+            const synergy = checkBuildSynergy(animal, weaponData);
+            
+            const weaponBonusAtk = weaponData ? (weaponData.atk + (slotWeapon.level - 1) * 5) : 0;
+            const weaponBonusDef = weaponData ? (weaponData.def + (slotWeapon.level - 1) * 3) : 0;
+            
+            const hp = Math.floor(animal.hp * levelMultiplier * 10) + (synergy.hasSynergy ? synergy.bonusHp : 0);
+            const atk = Math.floor(animal.atk * levelMultiplier * 10) + weaponBonusAtk + (synergy.hasSynergy ? synergy.bonusAtk : 0);
+            const def = Math.floor(animal.def * levelMultiplier * 8) + weaponBonusDef + (synergy.hasSynergy ? synergy.bonusDef : 0);
+            const spd = Math.floor((animal.spd || 15) * levelMultiplier * 8);
+            const crit = Math.min(75, 16 + (synergy.hasSynergy ? synergy.bonusCrit : 0));
+            
+            pets.push({
+              name: animal.name, emoji: animal.emoji, lvl, hp, maxHp: hp,
+              atk, def, spd, crit,
+              weaponIcon: weaponData ? (weaponData.typeEmoji || '🛡️') : '🛡️',
+              synergyActive: synergy.hasSynergy
+            });
+          }
+        }
+        return pets;
+      }
+      
+      const p1Team = loadTeam(user.id, user);
+      const p2Team = loadTeam(pvpTarget.id, targetUser);
+      
+      if (p1Team.length === 0) {
+        return message.reply(`❌ You have no animals for battle! Catch animals first with \`owo hunt\`!`);
+      }
+      if (p2Team.length === 0) {
+        return message.reply(`❌ **${pvpTarget.username}** has no animals for battle! They need to hunt first!`);
+      }
+      
+      // ---- Simulate PvP Battle ----
+      const battleLog = [];
+      let p1TotalHp = p1Team.reduce((a, p) => a + p.hp, 0);
+      let p2TotalHp = p2Team.reduce((a, p) => a + p.hp, 0);
+      const p1MaxHp = p1TotalHp;
+      const p2MaxHp = p2TotalHp;
+      
+      let turnCount = 0;
+      const maxTurns = 25;
+      
+      while (p1TotalHp > 0 && p2TotalHp > 0 && turnCount < maxTurns) {
+        turnCount++;
+        
+        // P1 attacks P2
+        const p1Attacker = p1Team[turnCount % p1Team.length];
+        const p2Defender = p2Team[turnCount % p2Team.length];
+        if (p1Attacker && p2Defender) {
+          const isCrit = Math.random() * 100 < p1Attacker.crit;
+          const critMult = isCrit ? 1.8 : 1.0;
+          const dodged = Math.random() * 100 < (p2Defender.spd / 10);
+          if (!dodged) {
+            let dmg = Math.max(1, Math.floor((p1Attacker.atk * critMult) - (p2Defender.def * 0.4)));
+            dmg += Math.floor(Math.random() * 15);
+            p2TotalHp = Math.max(0, p2TotalHp - dmg);
+            if (isCrit) {
+              battleLog.push(`⚡ ${p1Attacker.emoji} **${p1Attacker.name}** lands a **CRITICAL** strike on ${p2Defender.emoji} ${p2Defender.name} for **${dmg}** dmg!`);
+            } else {
+              battleLog.push(`⚔️ ${p1Attacker.emoji} ${p1Attacker.name} hits ${p2Defender.emoji} ${p2Defender.name} for **${dmg}** dmg`);
+            }
+          } else {
+            battleLog.push(`💨 ${p2Defender.emoji} ${p2Defender.name} dodges ${p1Attacker.emoji} ${p1Attacker.name}'s attack!`);
+          }
+        }
+        
+        if (p2TotalHp <= 0) break;
+        
+        // P2 attacks P1
+        const p2Attacker = p2Team[turnCount % p2Team.length];
+        const p1Defender = p1Team[turnCount % p1Team.length];
+        if (p2Attacker && p1Defender) {
+          const isCrit = Math.random() * 100 < p2Attacker.crit;
+          const critMult = isCrit ? 1.8 : 1.0;
+          const dodged = Math.random() * 100 < (p1Defender.spd / 10);
+          if (!dodged) {
+            let dmg = Math.max(1, Math.floor((p2Attacker.atk * critMult) - (p1Defender.def * 0.4)));
+            dmg += Math.floor(Math.random() * 15);
+            p1TotalHp = Math.max(0, p1TotalHp - dmg);
+            if (isCrit) {
+              battleLog.push(`⚡ ${p2Attacker.emoji} **${p2Attacker.name}** lands a **CRITICAL** strike on ${p1Defender.emoji} ${p1Defender.name} for **${dmg}** dmg!`);
+            } else {
+              battleLog.push(`⚔️ ${p2Attacker.emoji} ${p2Attacker.name} hits ${p1Defender.emoji} ${p1Defender.name} for **${dmg}** dmg`);
+            }
+          } else {
+            battleLog.push(`💨 ${p1Defender.emoji} ${p1Defender.name} dodges ${p2Attacker.emoji} ${p2Attacker.name}'s attack!`);
+          }
+        }
+      }
+      
+      // Determine winner
+      const p1Won = p1TotalHp > p2TotalHp;
+      const winnerName = p1Won ? message.author.username : pvpTarget.username;
+      const loserName = p1Won ? pvpTarget.username : message.author.username;
+      const winnerId = p1Won ? user.id : pvpTarget.id;
+      const loserId = p1Won ? pvpTarget.id : user.id;
+      
+      // Rewards
+      const winCowoncy = 800 + Math.floor(Math.random() * 400);
+      const winXp = 300;
+      const loseCowoncy = 150;
+      db.addCowoncy(winnerId, winCowoncy);
+      db.addCowoncy(loserId, loseCowoncy);
+      
+      // Build team display strings
+      const p1TeamName = ((user.active_team || 1) === 2 ? user.team_name_2 : user.team_name) || 'Team';
+      const p2TeamName = ((targetUser.active_team || 1) === 2 ? targetUser.team_name_2 : targetUser.team_name) || 'Team';
+      
+      const p1Display = p1Team.map(p => `L.${p.lvl} ${p.emoji} **${p.name}** ${p.weaponIcon}${p.synergyActive ? '⭐' : ''}`).join('\n');
+      const p2Display = p2Team.map(p => `L.${p.lvl} ${p.emoji} **${p.name}** ${p.weaponIcon}${p.synergyActive ? '⭐' : ''}`).join('\n');
+      
+      // HP bars
+      const p1HpPct = Math.max(0, Math.floor((p1TotalHp / p1MaxHp) * 10));
+      const p2HpPct = Math.max(0, Math.floor((p2TotalHp / p2MaxHp) * 10));
+      const p1HpBar = '`[' + '▓'.repeat(p1HpPct) + '░'.repeat(10 - p1HpPct) + ']`';
+      const p2HpBar = '`[' + '▓'.repeat(p2HpPct) + '░'.repeat(10 - p2HpPct) + ']`';
+      
+      // Show last 5 battle log entries
+      const logDisplay = battleLog.slice(-5).join('\n');
+      
+      const resultEmoji = p1Won ? '🏆' : '💀';
+      const embed = new EmbedBuilder()
+        .setColor(p1Won ? '#43b581' : '#f04747')
+        .setAuthor({
+          name: `⚔️ PvP Battle: ${message.author.username} vs ${pvpTarget.username}`,
+          iconURL: message.author.displayAvatarURL()
+        })
+        .addFields(
+          {
+            name: `📋 ${message.author.username}'s ${p1TeamName}`,
+            value: `${p1Display}\n${p1HpBar} \`${Math.max(0, p1TotalHp).toLocaleString()} HP\``,
+            inline: true
+          },
+          {
+            name: `📋 ${pvpTarget.username}'s ${p2TeamName}`,
+            value: `${p2Display}\n${p2HpBar} \`${Math.max(0, p2TotalHp).toLocaleString()} HP\``,
+            inline: true
+          },
+          {
+            name: `📜 Battle Log (${turnCount} turns)`,
+            value: logDisplay || '*No attacks landed*',
+            inline: false
+          }
+        )
+        .setDescription(
+          `${resultEmoji} **${winnerName}** wins the PvP battle in **${turnCount}** turns!\n\n` +
+          `🏆 **${winnerName}** earned **+${winCowoncy.toLocaleString()} Cowoncy** & **+${winXp} XP**\n` +
+          `🤝 **${loserName}** received **+${loseCowoncy} Cowoncy** (consolation)`
+        )
+        .setThumbnail(typeof pvpTarget.displayAvatarURL === 'function' ? pvpTarget.displayAvatarURL() : '')
+        .setFooter({ text: `Use 'wb @user' to challenge anyone! | Build your team with 'wteam'` });
+
+      return message.reply({ embeds: [embed] });
+    }
+
+    // ========== PvE BATTLE (original) ==========
     // Retrieve active team (Team 1 = slots 1..3, Team 2 = slots 4..6)
     const activeTeamNum = user.active_team || 1;
     const minSlot = (activeTeamNum - 1) * 3 + 1;

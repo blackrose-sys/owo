@@ -213,6 +213,68 @@ const ACTION_GIFS = {
   ],
   grin: [
     'https://media.giphy.com/media/xUPGcMzfkOPQB3IQbK/giphy.gif'
+  ],
+  headpat: [
+    'https://media.giphy.com/media/ye7OTDaJ5UMddUj5yz/giphy.gif',
+    'https://media.giphy.com/media/L2z7dnOduqEow/giphy.gif',
+    'https://media.giphy.com/media/4HP0ddZnNVvKU/giphy.gif',
+    'https://media.giphy.com/media/109ltuoSQW21OW/giphy.gif'
+  ],
+  spongebobchicken: [
+    'https://media.giphy.com/media/l0HlvB2GAAMgqfNkY/giphy.gif',
+    'https://media.giphy.com/media/QUXYcgCwvCm4cKcrI3/giphy.gif'
+  ],
+  zombie: [
+    'https://media.giphy.com/media/RKMm7X3HGKZMuoZlMF/giphy.gif',
+    'https://media.giphy.com/media/l41lPPSE5x9nqnQLC/giphy.gif'
+  ],
+  bonk: [
+    'https://media.giphy.com/media/Gf3AUz3eBNbTW/giphy.gif',
+    'https://media.giphy.com/media/jLeyZWgtwWP2U/giphy.gif'
+  ],
+  yeet: [
+    'https://media.giphy.com/media/Zau0yrl15jddK/giphy.gif',
+    'https://media.giphy.com/media/arbHBDAUw95yU/giphy.gif'
+  ],
+  facepalm: [
+    'https://media.giphy.com/media/3o7aCSX4nN1W2Nss80/giphy.gif',
+    'https://media.giphy.com/media/XpgOZHuDfI09O/giphy.gif'
+  ],
+  dab: [
+    'https://media.giphy.com/media/j3iGKfXRKlBBe/giphy.gif',
+    'https://media.giphy.com/media/13CoXDiaCcCoyk/giphy.gif'
+  ],
+  nuzzle: [
+    'https://media.giphy.com/media/l41lI4bYmcsPJX9Go/giphy.gif',
+    'https://media.giphy.com/media/xT39CXg70nNS0MFNLy/giphy.gif'
+  ],
+  glomp: [
+    'https://media.giphy.com/media/u9BxQbM5bxvwA/giphy.gif',
+    'https://media.giphy.com/media/3bqtLMeiO2jRm/giphy.gif'
+  ],
+  tackle: [
+    'https://media.giphy.com/media/arbHBDAUw95yU/giphy.gif',
+    'https://media.giphy.com/media/10Am8idu3qBYRy/giphy.gif'
+  ],
+  chase: [
+    'https://media.giphy.com/media/j3iGKfXRKlBBe/giphy.gif',
+    'https://media.giphy.com/media/13CoXDiaCcCoyk/giphy.gif'
+  ],
+  pounce: [
+    'https://media.giphy.com/media/Lq0h93752f6J9tijrh/giphy.gif',
+    'https://media.giphy.com/media/i8tV2kJB8Gig8/giphy.gif'
+  ],
+  beg: [
+    'https://media.giphy.com/media/XpgOZHuDfI09O/giphy.gif',
+    'https://media.giphy.com/media/bQC7ZMBl0oI36/giphy.gif'
+  ],
+  whine: [
+    'https://media.giphy.com/media/ROF8OQvDmxytW/giphy.gif',
+    'https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif'
+  ],
+  growl: [
+    'https://media.giphy.com/media/Gf3AUz3eBNbTW/giphy.gif',
+    'https://media.giphy.com/media/Zau0yrl15jddK/giphy.gif'
   ]
 };
 
