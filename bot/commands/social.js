@@ -344,64 +344,145 @@ module.exports = {
     const isImpostor = Math.random() < 0.5;
 
     try {
-      const width = 640;
-      const height = 360;
+      const width = 800;
+      const height = 450;
       const canvas = createCanvas(width, height);
       const ctx = canvas.getContext('2d');
 
-      // 1. Deep space background
+      // 1. Deep Space Black Background
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, width, height);
 
-      // 2. Stars
-      for (let i = 0; i < 70; i++) {
+      // 2. Dynamic Stars
+      for (let i = 0; i < 140; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
-        const radius = Math.random() < 0.2 ? 2.5 : Math.random() < 0.6 ? 1.5 : 1;
-        const opacity = 0.5 + Math.random() * 0.5;
-        ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+        const r = Math.random() < 0.15 ? 2.5 : Math.random() < 0.6 ? 1.5 : 1.0;
+        const alpha = 0.3 + Math.random() * 0.7;
+
+        ctx.save();
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
         ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 3. Among Us Crewmate Astronaut Floating & Spinning on Right Side
+      const astroX = width * 0.82;
+      const astroY = height * 0.50;
+      const scale = 0.85;
+
+      ctx.save();
+      ctx.translate(astroX, astroY);
+      ctx.rotate(32 * Math.PI / 180);
+
+      const suitColor = isImpostor ? '#c62828' : '#1565c0'; // Red for Impostor, Blue for Crewmate
+      const shadowColor = isImpostor ? '#8e0000' : '#0d47a1';
+
+      // Backpack
+      ctx.fillStyle = shadowColor;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(-55 * scale, -25 * scale, 25 * scale, 50 * scale, 10 * scale);
+      } else {
+        ctx.rect(-55 * scale, -25 * scale, 25 * scale, 50 * scale);
+      }
+      ctx.fill();
+
+      ctx.fillStyle = suitColor;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(-50 * scale, -22 * scale, 22 * scale, 44 * scale, 8 * scale);
+      } else {
+        ctx.rect(-50 * scale, -22 * scale, 22 * scale, 44 * scale);
+      }
+      ctx.fill();
+
+      // Suit Body
+      ctx.fillStyle = suitColor;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(-35 * scale, -45 * scale, 70 * scale, 90 * scale, 35 * scale);
+      } else {
+        ctx.arc(0, 0, 35 * scale, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Shadow bottom
+      ctx.fillStyle = shadowColor;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(-35 * scale, 10 * scale, 70 * scale, 35 * scale, [0, 0, 35 * scale, 35 * scale]);
+      } else {
+        ctx.arc(0, 15 * scale, 25 * scale, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Visor (Oval Window with Target User's Avatar inside!)
+      const visorW = 46 * scale;
+      const visorH = 32 * scale;
+      const visorX = 5 * scale;
+      const visorY = -15 * scale;
+
+      ctx.fillStyle = '#64b5f6';
+      ctx.beginPath();
+      ctx.ellipse(visorX, visorY, visorW / 2 + 3, visorH / 2 + 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      try {
+        const avatarImg = await loadImage(targetAvatar);
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(visorX, visorY, visorW / 2, visorH / 2, 0, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(avatarImg, visorX - visorW / 2, visorY - visorH / 2, visorW, visorH);
+        ctx.restore();
+      } catch (e) {
+        ctx.fillStyle = '#90caf9';
+        ctx.beginPath();
+        ctx.ellipse(visorX, visorY, visorW / 2, visorH / 2, 0, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // 3. User Avatar (tilted 42 degrees, floating on right side of space)
-      try {
-        const img = await loadImage(targetAvatar);
-        ctx.save();
-        const avatarSize = 95;
-        const avatarX = width * 0.78;
-        const avatarY = height * 0.55;
-        ctx.translate(avatarX, avatarY);
-        ctx.rotate(42 * Math.PI / 180);
-        ctx.drawImage(img, -avatarSize / 2, -avatarSize / 2, avatarSize, avatarSize);
-        ctx.restore();
-      } catch (e) {}
+      // Visor glass glare reflection
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(visorX - 6 * scale, visorY - 6 * scale, 12 * scale, 6 * scale, -20 * Math.PI / 180, 0, Math.PI * 2);
+      ctx.fill();
 
-      // 4. Centered Ejection text
-      ctx.fillStyle = '#ffffff';
+      ctx.restore();
+
+      // 4. Centered Among Us Ejection Text
+      ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = '24px "Arial", "Segoe UI", sans-serif';
 
+      const textCenterX = width * 0.42;
+
+      // Main text line
       const mainText = `${target.username} was ${isImpostor ? 'An Impostor.' : 'not An Impostor.'}`;
-      ctx.fillText(mainText, width / 2, height / 2);
+      ctx.font = 'bold 26px "Courier New", monospace, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(mainText, textCenterX, height / 2 - 20);
 
+      // Subtext line
       const subText = isImpostor ? '0 Impostors remain.' : '1 Impostor remains.';
-      ctx.font = '16px "Arial", "Segoe UI", sans-serif';
+      ctx.font = '20px "Courier New", monospace, sans-serif';
       ctx.fillStyle = '#cccccc';
-      ctx.fillText(subText, width / 2, height / 2 + 35);
+      ctx.fillText(subText, textCenterX, height / 2 + 30);
+      ctx.restore();
 
       const buffer = canvas.toBuffer('image/png');
       const attachment = new AttachmentBuilder(buffer, { name: 'ejected.png' });
 
       return message.reply({
-        content: `🚀 | **${message.author.username}** decided to vote off ${target.username}`,
+        content: `🚀 | **${message.author.username}** decided to vote off **${target.username}**`,
         files: [attachment]
       });
     } catch (err) {
       console.error('Eject generation error:', err);
-      return message.reply(`🚀 | **${message.author.username}** decided to vote off ${target.username}\n*${target.username} was ${isImpostor ? 'An Impostor.' : 'not An Impostor.'}*`);
+      return message.reply(`🚀 | **${message.author.username}** decided to vote off **${target.username}**\n*${target.username} was ${isImpostor ? 'An Impostor.' : 'not An Impostor.'}*`);
     }
   },
 
