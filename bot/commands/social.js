@@ -1,5 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, AttachmentBuilder } = require('discord.js');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const GIFEncoder = require('gif-encoder-2');
 const db = require('../../database/db');
 const { getRandomFace, owoify, getActionGif } = require('../../database/data/dialogue');
 
@@ -344,137 +345,126 @@ module.exports = {
     const isImpostor = Math.random() < 0.5;
 
     try {
-      const width = 800;
-      const height = 450;
+      const width = 500;
+      const height = 280;
+
+      const encoder = new GIFEncoder(width, height, 'octree', false);
+      encoder.start();
+      encoder.setRepeat(0);
+      encoder.setDelay(80);
+      encoder.setQuality(10);
+
       const canvas = createCanvas(width, height);
       const ctx = canvas.getContext('2d');
 
-      // 1. Deep Space Black Background
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, width, height);
-
-      // 2. Dynamic Stars
-      for (let i = 0; i < 140; i++) {
-        const x = Math.random() * width;
-        const y = Math.random() * height;
-        const r = Math.random() < 0.15 ? 2.5 : Math.random() < 0.6 ? 1.5 : 1.0;
-        const alpha = 0.3 + Math.random() * 0.7;
-
-        ctx.save();
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+      // Pre-generate fixed star positions
+      const stars = [];
+      for (let i = 0; i < 80; i++) {
+        stars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          r: Math.random() < 0.2 ? 2 : 1,
+          alpha: 0.3 + Math.random() * 0.7,
+          speed: 0.5 + Math.random() * 1.5
+        });
       }
 
-      // 3. Among Us Crewmate Astronaut Floating & Spinning on Right Side
-      const astroX = width * 0.82;
-      const astroY = height * 0.50;
-      const scale = 0.85;
-
-      ctx.save();
-      ctx.translate(astroX, astroY);
-      ctx.rotate(32 * Math.PI / 180);
-
-      const suitColor = isImpostor ? '#c62828' : '#1565c0'; // Red for Impostor, Blue for Crewmate
-      const shadowColor = isImpostor ? '#8e0000' : '#0d47a1';
-
-      // Backpack
-      ctx.fillStyle = shadowColor;
-      ctx.beginPath();
-      if (typeof ctx.roundRect === 'function') {
-        ctx.roundRect(-55 * scale, -25 * scale, 25 * scale, 50 * scale, 10 * scale);
-      } else {
-        ctx.rect(-55 * scale, -25 * scale, 25 * scale, 50 * scale);
-      }
-      ctx.fill();
-
-      ctx.fillStyle = suitColor;
-      ctx.beginPath();
-      if (typeof ctx.roundRect === 'function') {
-        ctx.roundRect(-50 * scale, -22 * scale, 22 * scale, 44 * scale, 8 * scale);
-      } else {
-        ctx.rect(-50 * scale, -22 * scale, 22 * scale, 44 * scale);
-      }
-      ctx.fill();
-
-      // Suit Body
-      ctx.fillStyle = suitColor;
-      ctx.beginPath();
-      if (typeof ctx.roundRect === 'function') {
-        ctx.roundRect(-35 * scale, -45 * scale, 70 * scale, 90 * scale, 35 * scale);
-      } else {
-        ctx.arc(0, 0, 35 * scale, 0, Math.PI * 2);
-      }
-      ctx.fill();
-
-      // Shadow bottom
-      ctx.fillStyle = shadowColor;
-      ctx.beginPath();
-      if (typeof ctx.roundRect === 'function') {
-        ctx.roundRect(-35 * scale, 10 * scale, 70 * scale, 35 * scale, [0, 0, 35 * scale, 35 * scale]);
-      } else {
-        ctx.arc(0, 15 * scale, 25 * scale, 0, Math.PI * 2);
-      }
-      ctx.fill();
-
-      // Visor (Oval Window with Target User's Avatar inside!)
-      const visorW = 46 * scale;
-      const visorH = 32 * scale;
-      const visorX = 5 * scale;
-      const visorY = -15 * scale;
-
-      ctx.fillStyle = '#64b5f6';
-      ctx.beginPath();
-      ctx.ellipse(visorX, visorY, visorW / 2 + 3, visorH / 2 + 3, 0, 0, Math.PI * 2);
-      ctx.fill();
-
+      // Preload avatar
+      let avatarImg = null;
       try {
-        const avatarImg = await loadImage(targetAvatar);
+        avatarImg = await loadImage(targetAvatar);
+      } catch (e) {}
+
+      const suitColor = isImpostor ? '#c62828' : '#1565c0';
+      const shadowColor = isImpostor ? '#8e0000' : '#0d47a1';
+      const fullMainText = `${target.username} was ${isImpostor ? 'An Impostor.' : 'not An Impostor.'}`;
+      const fullSubText = isImpostor ? '0 Impostors remain.' : '1 Impostor remains.';
+      const totalFrames = 22;
+      const scale = 0.65;
+
+      for (let f = 0; f < totalFrames; f++) {
+        const progress = f / (totalFrames - 1);
+
+        // 1. Black Space Background
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, width, height);
+
+        // 2. Moving Stars (scroll left)
+        for (const star of stars) {
+          star.x -= star.speed;
+          if (star.x < 0) star.x = width;
+          ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 3. Crewmate floating across screen & spinning
+        const astroX = -50 + progress * (width + 100);
+        const astroY = height * 0.45 + Math.sin(progress * Math.PI * 2) * 15;
+        const rotation = progress * Math.PI * 4;
+
         ctx.save();
+        ctx.translate(astroX, astroY);
+        ctx.rotate(rotation);
+
+        // Backpack
+        ctx.fillStyle = shadowColor;
+        ctx.fillRect(-50 * scale, -22 * scale, 22 * scale, 44 * scale);
+
+        // Body
+        ctx.fillStyle = suitColor;
         ctx.beginPath();
-        ctx.ellipse(visorX, visorY, visorW / 2, visorH / 2, 0, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.drawImage(avatarImg, visorX - visorW / 2, visorY - visorH / 2, visorW, visorH);
-        ctx.restore();
-      } catch (e) {
-        ctx.fillStyle = '#90caf9';
-        ctx.beginPath();
-        ctx.ellipse(visorX, visorY, visorW / 2, visorH / 2, 0, 0, Math.PI * 2);
+        ctx.arc(0, 0, 30 * scale, 0, Math.PI * 2);
         ctx.fill();
+
+        // Visor with Avatar
+        const visorW = 40 * scale;
+        const visorH = 26 * scale;
+        const visorX = 4 * scale;
+        const visorY = -12 * scale;
+
+        ctx.fillStyle = '#64b5f6';
+        ctx.beginPath();
+        ctx.ellipse(visorX, visorY, visorW / 2 + 2, visorH / 2 + 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (avatarImg) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.ellipse(visorX, visorY, visorW / 2, visorH / 2, 0, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(avatarImg, visorX - visorW / 2, visorY - visorH / 2, visorW, visorH);
+          ctx.restore();
+        }
+
+        ctx.restore();
+
+        // 4. Text with typewriter effect
+        const charsToShow = Math.floor(progress * (fullMainText.length + 8));
+        const currentMainText = fullMainText.substring(0, Math.min(charsToShow, fullMainText.length));
+
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        ctx.font = 'bold 20px "Courier New", monospace, sans-serif';
+        ctx.fillStyle = isImpostor && progress > 0.6 ? '#ff4d4d' : '#ffffff';
+        ctx.fillText(currentMainText, width / 2, height / 2 - 10);
+
+        if (charsToShow >= fullMainText.length + 2) {
+          ctx.font = '15px "Courier New", monospace, sans-serif';
+          ctx.fillStyle = '#b0b0b0';
+          ctx.fillText(fullSubText, width / 2, height / 2 + 25);
+        }
+        ctx.restore();
+
+        encoder.addFrame(ctx);
       }
 
-      // Visor glass glare reflection
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.beginPath();
-      ctx.ellipse(visorX - 6 * scale, visorY - 6 * scale, 12 * scale, 6 * scale, -20 * Math.PI / 180, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
-
-      // 4. Centered Among Us Ejection Text
-      ctx.save();
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const textCenterX = width * 0.42;
-
-      // Main text line
-      const mainText = `${target.username} was ${isImpostor ? 'An Impostor.' : 'not An Impostor.'}`;
-      ctx.font = 'bold 26px "Courier New", monospace, sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(mainText, textCenterX, height / 2 - 20);
-
-      // Subtext line
-      const subText = isImpostor ? '0 Impostors remain.' : '1 Impostor remains.';
-      ctx.font = '20px "Courier New", monospace, sans-serif';
-      ctx.fillStyle = '#cccccc';
-      ctx.fillText(subText, textCenterX, height / 2 + 30);
-      ctx.restore();
-
-      const buffer = canvas.toBuffer('image/png');
-      const attachment = new AttachmentBuilder(buffer, { name: 'ejected.png' });
+      encoder.finish();
+      const gifBuffer = encoder.out.getData();
+      const attachment = new AttachmentBuilder(Buffer.from(gifBuffer), { name: 'ejected.gif' });
 
       return message.reply({
         content: `🚀 | **${message.author.username}** decided to vote off **${target.username}**`,
