@@ -146,7 +146,7 @@ async function loadLeaderboards() {
             <span>${u.display_animal || '🐶'}</span>
             <span>${u.username}</span>
           </div>
-          <div class="lb-score">🪙 ${u.cowoncy.toLocaleString()}</div>
+          <div class="lb-score"><img src="/cowoncy.png" class="cowoncy-icon" alt="cowoncy"> ${u.cowoncy.toLocaleString()}</div>
         </div>
       `).join('');
     }
@@ -227,7 +227,7 @@ function renderShop() {
         <div>
           <div style="font-size: 1.1rem; font-weight: 700;">${item.name}</div>
           <div style="color: var(--text-muted); font-size: 0.85rem;">${item.description}</div>
-          <div style="color: var(--accent-gold); font-weight: 700; margin-top: 0.25rem;">🪙 ${item.price.toLocaleString()} Cowoncy</div>
+          <div style="color: var(--accent-gold); font-weight: 700; margin-top: 0.25rem;"><img src="/cowoncy.png" class="cowoncy-icon" alt="cowoncy"> ${item.price.toLocaleString()} Cowoncy</div>
         </div>
       </div>
       <button class="btn btn-secondary" onclick="buyItem('${item.id}')">Buy 1x</button>
@@ -412,7 +412,7 @@ async function executeCommand(rawCommand) {
   } else if (cmd === 'cl' || cmd === 'checklist' || cmd === 'quest' || cmd === 'q') {
     appendBotMessage(null, {
       title: `📜 Daily Checklist & Quests`,
-      description: `Complete your daily tasks in Discord or here:\n• 🐾 Hunt 5 times\n• 🎰 Play Slots 3 times\n• 🪙 Play Coinflip 3 times\n\nReward: 3,000 Cowoncy + Rare Crate!`,
+      description: `Complete your daily tasks in Discord or here:\n• 🐾 Hunt 5 times\n• 🎰 Play Slots 3 times\n• <img src="/cowoncy.png" class="cowoncy-icon" alt="cowoncy"> Play Coinflip 3 times\n\nReward: 3,000 Cowoncy + Rare Crate!`,
       color: '#8a7ff8'
     });
   } else if (cmd === 'cookie') {
@@ -889,7 +889,7 @@ function renderAdminItemsGrid() {
         <div class="admin-card-emoji">${item.emoji}</div>
         <div class="admin-card-name">${item.name}</div>
         <div class="admin-card-tier" style="background: rgba(255, 204, 0, 0.15); color: #ffcc00; border: 1px solid rgba(255, 204, 0, 0.4);">${item.category || 'item'}</div>
-        <div style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">🪙 ${item.price?.toLocaleString()}</div>
+        <div style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);"><img src="/cowoncy.png" class="cowoncy-icon" alt="cowoncy"> ${item.price?.toLocaleString()}</div>
       </div>
     `;
   }).join('');

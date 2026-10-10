@@ -1,4 +1,6 @@
 const { Client, GatewayIntentBits, Partials, ActivityType } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
 const { handleMessage, handleInteraction } = require('./handlers/commandHandler');
 
 let client = null;
@@ -41,9 +43,21 @@ function createClient() {
 
     console.log(`[OwO Bot] Logged in successfully as ${client.user.tag}! Active in ${client.guilds.cache.size} servers.`);
 
-    // Pre-cache application card emojis
+    // Pre-cache application emojis & create cowoncy emoji if missing
     if (client.application?.emojis) {
-      await client.application.emojis.fetch().catch(() => {});
+      try {
+        await client.application.emojis.fetch().catch(() => {});
+        let cowoncyEmoji = client.application.emojis.cache.find(e => e.name === 'cowoncy');
+        if (!cowoncyEmoji) {
+          const cowoncyPath = path.join(__dirname, '..', 'public', 'cowoncy.png');
+          if (fs.existsSync(cowoncyPath)) {
+            cowoncyEmoji = await client.application.emojis.create({ name: 'cowoncy', attachment: cowoncyPath });
+            console.log(`[OwO Bot] Created custom application emoji <:cowoncy:${cowoncyEmoji.id}>!`);
+          }
+        }
+      } catch (err) {
+        console.log('[OwO Bot] Cowoncy emoji check note:', err.message);
+      }
       console.log(`[OwO Bot] Cached ${client.application.emojis.cache.size} custom emojis.`);
     }
 

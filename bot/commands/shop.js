@@ -10,10 +10,11 @@ const {
   getRarityBracket 
 } = require('../../database/data/items');
 const { getRandomAnimals, getAnimalById } = require('../../database/data/animals');
-const { getRandomFace } = require('../../database/data/dialogue');
+const { getRandomFace, getCowoncyEmoji } = require('../../database/data/dialogue');
 
 module.exports = {
   shop: async (message, args, user) => {
+    const cEmoji = getCowoncyEmoji(message?.client);
     const embed = new EmbedBuilder()
       .setColor('#00e5ff')
       .setTitle(`🛍️ OwO Emporium & Shop ${getRandomFace()}`)
@@ -24,7 +25,7 @@ module.exports = {
 
     for (const item of SHOP_ITEMS) {
       embed.addFields({
-        name: `${item.emoji} ${item.name} — 🪙 ${item.price.toLocaleString()} Cowoncy`,
+        name: `${item.emoji} ${item.name} — ${cEmoji} ${item.price.toLocaleString()} Cowoncy`,
         value: `ID: \`${item.id}\` • ${item.description}`,
         inline: false
       });

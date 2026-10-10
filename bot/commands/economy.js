@@ -1,6 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
-const { getRandomFace, owoify } = require('../../database/data/dialogue');
+const { getRandomFace, owoify, getCowoncyEmoji } = require('../../database/data/dialogue');
 const { checkCooldown } = require('../handlers/cooldownHandler');
 
 function getMentionedUser(message) {
@@ -63,7 +63,7 @@ module.exports = {
       .setTitle(`✨ Daily Reward Claimed! ${getRandomFace()}`)
       .setDescription(
         `**${message.author.username}**, here is your daily cowoncy allowance!\n\n` +
-        `🪙 **+${totalCowoncy.toLocaleString()} Cowoncy**\n` +
+        `${getCowoncyEmoji(message?.client)} **+${totalCowoncy.toLocaleString()} Cowoncy**\n` +
         `🔥 **Daily Streak:** \`${streak} days\` *(+${streakBonus} streak bonus)*\n` +
         `⭐ **EXP:** \`+50 EXP\`\n` +
         (bonusLoot.length > 0 ? `\n🎉 **Bonus Loot:**\n${bonusLoot.join('\n')}` : '')
@@ -428,7 +428,7 @@ module.exports = {
       .setTitle(`🗳️ Thank you for voting! ${getRandomFace()}`)
       .setDescription(
         `**${message.author.username}**, you received your vote reward!\n\n` +
-        `🪙 **+${rewardCowoncy.toLocaleString()} Cowoncy**\n` +
+        `${getCowoncyEmoji(message?.client)} **+${rewardCowoncy.toLocaleString()} Cowoncy**\n` +
         `🎁 **+1x Rare Crate**\n\n` +
         `*You can vote again in 12 hours for more Cowoncy!*`
       );

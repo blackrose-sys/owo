@@ -284,10 +284,26 @@ function getActionGif(action) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
+function getCowoncyEmoji(client) {
+  if (client?.application?.emojis?.cache) {
+    const found = client.application.emojis.cache.find(e => e.name.toLowerCase() === 'cowoncy');
+    if (found) return `<:cowoncy:${found.id}>`;
+  }
+  if (client?.emojis?.cache) {
+    const found = client.emojis.cache.find(e => e.name.toLowerCase() === 'cowoncy');
+    if (found) return `<:cowoncy:${found.id}>`;
+  }
+  return '<:cowoncy:1062070383742468106>';
+}
+
+const COWONCY_EMOJI = '<:cowoncy:1062070383742468106>';
+
 module.exports = {
   OWO_FACES,
   getRandomFace,
   owoify,
   ACTION_GIFS,
-  getActionGif
+  getActionGif,
+  getCowoncyEmoji,
+  COWONCY_EMOJI
 };

@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const db = require('../../database/db');
 const { ANIMALS } = require('../../database/data/animals');
-const { getRandomFace } = require('../../database/data/dialogue');
+const { getRandomFace, getCowoncyEmoji } = require('../../database/data/dialogue');
 
 function makeProgressBar(current, max, size = 10) {
   const percent = Math.min(Math.max(current / max, 0), 1);
@@ -45,7 +45,7 @@ module.exports = {
         `💖 **Relationship:** ${marriageText}\n\n` +
         `⭐ **Level Progress:** (Lv. ${targetData.level})\n` +
         `${progressBar} \`(${targetData.xp}/${xpNeeded} XP)\`\n\n` +
-        `🪙 **Cowoncy:** \`${(targetData.cowoncy || 0).toLocaleString()}\`\n` +
+        `${getCowoncyEmoji(message?.client)} **Cowoncy:** \`${(targetData.cowoncy || 0).toLocaleString()}\`\n` +
         `🔥 **Daily Streak:** \`${targetData.daily_streak || 0} days\`\n\n` +
         `🐾 **Zoo Collection:** \`${uniqueAnimals}/${ANIMALS.length}\` unique (\`${totalAnimals.toLocaleString()}\` total)\n` +
         `🌲 **Hunts Completed:** \`${(targetData.hunts || 0).toLocaleString()}\`\n` +
@@ -71,7 +71,7 @@ module.exports = {
           ? 'No players recorded yet!'
           : topUsers.map((u, i) => {
               const medal = medals[i] || `${i + 1}.`;
-              const score = isHunts ? `${(u.hunts || 0).toLocaleString()} hunts` : `🪙 ${(u.cowoncy || 0).toLocaleString()}`;
+              const score = isHunts ? `${(u.hunts || 0).toLocaleString()} hunts` : `${getCowoncyEmoji(message?.client)} ${(u.cowoncy || 0).toLocaleString()}`;
               return `${medal} ${u.display_animal || '🐶'} **${u.username}** — \`${score}\` *(${u.title})*`;
             }).join('\n')
       )
