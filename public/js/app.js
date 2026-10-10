@@ -408,7 +408,7 @@ async function executeCommand(rawCommand) {
     });
   } else if (cmd === 'cash' || cmd === 'bal' || cmd === 'money' || cmd === 'c') {
     const bal = state.user?.cowoncy || 1000;
-    appendBotMessage(`💰 | **${state.username}**, you currently have **${bal.toLocaleString()}** Cowoncy!`);
+    appendBotMessage(`<img src="/cowoncy.png" class="cowoncy-icon" alt="cowoncy"> | **${state.username}**, you currently have __**${bal.toLocaleString()}**__ **cowoncy**!`);
   } else if (cmd === 'cl' || cmd === 'checklist' || cmd === 'quest' || cmd === 'q') {
     appendBotMessage(null, {
       title: `📜 Daily Checklist & Quests`,

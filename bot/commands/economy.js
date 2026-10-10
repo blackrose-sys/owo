@@ -76,8 +76,9 @@ module.exports = {
   balance: async (message, args, user) => {
     const targetUser = getMentionedUser(message) || message.author;
     const targetData = db.getUser(targetUser.id, targetUser.username);
+    const cEmoji = getCowoncyEmoji(message?.client);
 
-    return message.reply(`💵 | **${targetData.username}**, you currently have **${(targetData.cowoncy || 0).toLocaleString()}** cowoncy!`);
+    return message.reply(`${cEmoji} | **${targetData.username}**, you currently have __**${(targetData.cowoncy || 0).toLocaleString()}**__ **cowoncy**!`);
   },
 
   give: async (message, args, user) => {
