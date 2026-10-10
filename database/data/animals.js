@@ -106,7 +106,39 @@ const TIER_INFO = {
 };
 
 function getAnimalById(id) {
-  return ANIMALS.find(a => a.id.toLowerCase() === id.toLowerCase() || a.name.toLowerCase() === id.toLowerCase());
+  if (!id) return null;
+  const search = id.toLowerCase().trim();
+  
+  // 1. Exact ID match
+  const exactId = ANIMALS.find(a => a.id.toLowerCase() === search);
+  if (exactId) return exactId;
+  
+  // 2. Exact name match
+  const exactName = ANIMALS.find(a => a.name.toLowerCase() === search);
+  if (exactName) return exactName;
+  
+  // 3. Underscore/dash → space conversion (frost_kitsune → frost kitsune, fire-phoenix → fire phoenix)
+  const spaced = search.replace(/[_\-]/g, ' ');
+  const spacedMatch = ANIMALS.find(a => a.name.toLowerCase() === spaced || a.id.toLowerCase() === spaced);
+  if (spacedMatch) return spacedMatch;
+  
+  // 4. Emoji match (e.g. searching by ⚡ or 🐺)
+  const emojiMatch = ANIMALS.find(a => a.emoji === id);
+  if (emojiMatch) return emojiMatch;
+  
+  // 5. Partial match - name starts with search (e.g. "frost" → "Frost Kitsune", "thunder" → "Thunder Beast")
+  const startsWith = ANIMALS.find(a => a.name.toLowerCase().startsWith(search) || a.name.toLowerCase().startsWith(spaced));
+  if (startsWith) return startsWith;
+  
+  // 6. Partial match - name contains search (e.g. "kitsune" → "Frost Kitsune", "phoenix" → "Fire Phoenix")
+  const contains = ANIMALS.find(a => a.name.toLowerCase().includes(search) || a.name.toLowerCase().includes(spaced));
+  if (contains) return contains;
+  
+  // 7. No spaces version (frostkitsune → frost kitsune)
+  const noSpaces = ANIMALS.find(a => a.name.toLowerCase().replace(/\s+/g, '') === search.replace(/\s+/g, ''));
+  if (noSpaces) return noSpaces;
+  
+  return null;
 }
 
 function getRandomAnimals(count = 1, luckBonus = 0) {

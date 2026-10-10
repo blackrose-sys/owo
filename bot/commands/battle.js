@@ -563,15 +563,37 @@ module.exports = {
     const subCmd = (args[0] || '').toLowerCase();
 
     if (subCmd === 'add' || subCmd === 'set') {
-      let animalName = args[1];
-      let slot = parseInt(args[2], 10);
-      if (/^\d+$/.test(args[1])) {
-        slot = parseInt(args[1], 10);
-        animalName = args[2];
+      // Smart parsing: last numeric arg = slot, everything else = animal name
+      // Supports: "wteam add dog 1", "wteam add frost kitsune 3", "wteam add frost_kitsune 3", "wteam add 1 dog"
+      const remaining = args.slice(1);
+      let slot = NaN;
+      let animalName = '';
+      
+      // Check if first remaining arg is a number (slot first format: "wteam add 1 dog")
+      if (remaining.length >= 2 && /^\d+$/.test(remaining[0])) {
+        slot = parseInt(remaining[0], 10);
+        animalName = remaining.slice(1).join(' ');
+      }
+      // Check if last remaining arg is a number (animal first format: "wteam add frost kitsune 3")
+      else if (remaining.length >= 2 && /^\d+$/.test(remaining[remaining.length - 1])) {
+        slot = parseInt(remaining[remaining.length - 1], 10);
+        animalName = remaining.slice(0, -1).join(' ');
+      }
+      // Single arg - could be just the animal name
+      else if (remaining.length === 1) {
+        animalName = remaining[0];
       }
 
       if (!slot || slot < 1 || slot > 3 || !animalName) {
-        return message.reply(`❌ Usage: \`owo team add {animal} {pos}\`\nExample: \`owo team add dog 1\``);
+        return message.reply(
+          `❌ Usage: \`owo team add {animal} {pos}\`\n` +
+          `**Examples:**\n` +
+          `• \`wteam add dog 1\` — Add Dog to slot 1\n` +
+          `• \`wteam add frost kitsune 3\` — Add Frost Kitsune to slot 3\n` +
+          `• \`wteam add frost_kitsune 2\` — Underscores work too!\n` +
+          `• \`wteam add phoenix 1\` — Partial names work (finds Fire Phoenix)\n\n` +
+          `💡 Check your zoo with \`wzoo\` to see animal names!`
+        );
       }
 
       const animal = getAnimalById(animalName);
