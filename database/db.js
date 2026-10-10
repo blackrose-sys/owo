@@ -60,6 +60,9 @@ db.exec(`
     weapon_id TEXT NOT NULL,
     level INTEGER DEFAULT 1,
     is_equipped INTEGER DEFAULT 0,
+    code TEXT,
+    quality REAL DEFAULT 50.0,
+    tier TEXT DEFAULT 'common',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
@@ -100,6 +103,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_users_hunts ON users(hunts DESC);
   CREATE INDEX IF NOT EXISTS idx_zoo_user ON zoo(user_id);
 `);
+
+// Safe migrations for newly added columns
+try { db.exec(`ALTER TABLE weapons ADD COLUMN code TEXT;`); } catch (e) {}
+try { db.exec(`ALTER TABLE weapons ADD COLUMN quality REAL DEFAULT 50.0;`); } catch (e) {}
+try { db.exec(`ALTER TABLE weapons ADD COLUMN tier TEXT DEFAULT 'common';`); } catch (e) {}
 
 // Prepared statements for maximum performance
 const stmts = {
@@ -160,6 +168,11 @@ const stmts = {
   unequipAllWeapons: db.prepare('UPDATE weapons SET is_equipped = 0 WHERE user_id = ?'),
   equipWeapon: db.prepare('UPDATE weapons SET is_equipped = 1 WHERE user_id = ? AND id = ?'),
   addWeapon: db.prepare('INSERT INTO weapons (user_id, weapon_id, level) VALUES (?, ?, 1)'),
+  addWeaponFull: db.prepare(`
+    INSERT INTO weapons (user_id, weapon_id, level, is_equipped, code, quality, tier)
+    VALUES (?, ?, ?, 0, ?, ?, ?)
+  `),
+  deleteWeapon: db.prepare('DELETE FROM weapons WHERE user_id = ? AND id = ?'),
 
   // Team
   getTeam: db.prepare('SELECT * FROM team WHERE user_id = ? ORDER BY slot ASC'),

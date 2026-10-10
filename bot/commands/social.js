@@ -240,6 +240,7 @@ module.exports = {
       boop: `${message.author.username} boops ${tName} on the nose! *squeak*`,
       snuggle: `${message.author.username} snuggles affectionately with ${tName}!`,
       bully: `${message.author.username} bullies ${tName}! Mean! >:3`,
+      dambi: target ? `${message.author.username} gives ${tName} a solid dambi! (💥 Aray ko!)` : `${message.author.username} hits the Malupiton dambi pose! 💥`,
       lewd: `${message.author.username} points at ${tName}: THAT'S WAY TOO LEWD! (*/ω＼*)`
     };
 
@@ -361,5 +362,128 @@ module.exports = {
       console.error('Eject generation error:', err);
       return message.reply(`🚀 | **${message.author.username}** decided to vote off ${target.username}\n*${target.username} was ${isImpostor ? 'An Impostor.' : 'not An Impostor.'}*`);
     }
+  },
+
+  ship: async (message, args) => {
+    let users = message.mentions?.users ? Array.from(message.mentions.users.values()) : [];
+    let user1 = null;
+    let user2 = null;
+
+    if (users.length >= 2) {
+      user1 = users[0];
+      user2 = users[1];
+    } else if (users.length === 1) {
+      user1 = message.author;
+      user2 = users[0];
+    } else if (args.length >= 2) {
+      user1 = { username: args[0] };
+      user2 = { username: args[1] };
+    } else if (args.length === 1) {
+      user1 = message.author;
+      user2 = { username: args[0] };
+    } else {
+      return message.reply(`❌ Who do you want to ship? Usage: \`owo ship @user1 @user2\` or \`owo ship @user\``);
+    }
+
+    // Deterministic love score based on names so repeated calls today yield consistent results
+    let seed = `${user1.username.toLowerCase()}_${user2.username.toLowerCase()}`;
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash << 5) - hash + seed.charCodeAt(i);
+      hash |= 0;
+    }
+    const percent = Math.abs(hash) % 101;
+
+    let verdict = 'Cute couple!';
+    let heart = '💖';
+    if (percent === 100) { verdict = '💍 A match made in heaven! Go get married now!'; heart = '💘'; }
+    else if (percent >= 85) { verdict = '💕 Soulmates! True love is definitely in the air!'; heart = '💖'; }
+    else if (percent >= 60) { verdict = '💗 Very high compatibility! Great chemistry!'; heart = '💓'; }
+    else if (percent >= 40) { verdict = '💛 Pretty good! There is definitely something there.'; heart = '💛'; }
+    else if (percent >= 20) { verdict = '💔 Might take some work... a few bumps on the road.'; heart = '💔'; }
+    else { verdict = '💀 Total catastrophe! Better stay as friends.'; heart = '🖤'; }
+
+    const filled = Math.round(percent / 10);
+    const empty = 10 - filled;
+    const bar = '`[' + '▓'.repeat(filled) + '░'.repeat(empty) + ']`';
+
+    const embed = new EmbedBuilder()
+      .setColor(percent >= 50 ? '#ff66b2' : '#7289da')
+      .setTitle(`${heart} Love Compatibility Machine!`)
+      .setDescription(
+        `**${user1.username}** 💞 **${user2.username}**\n\n` +
+        `**Affinity:** **${percent}%**\n` +
+        `${bar}\n\n` +
+        `*${verdict}*`
+      );
+
+    return message.reply({ embeds: [embed] });
+  },
+
+  eightball: async (message, args) => {
+    const question = args.join(' ').trim();
+    if (!question) {
+      return message.reply(`🎱 | What question do you want to ask the Magic 8-Ball? Example: \`owo 8b will I win jackpot?\``);
+    }
+
+    const responses = [
+      'It is certain.',
+      'It is decidedly so.',
+      'Without a doubt.',
+      'Yes definitely.',
+      'You may rely on it.',
+      'As I see it, yes.',
+      'Most likely.',
+      'Outlook good.',
+      'Yes!',
+      'Signs point to yes.',
+      'Reply hazy, try again.',
+      'Ask again later.',
+      'Better not tell you now.',
+      'Cannot predict now.',
+      'Concentrate and ask again.',
+      'Don\'t count on it.',
+      'My reply is no.',
+      'My sources say no.',
+      'Outlook not so good.',
+      'Very doubtful.'
+    ];
+
+    const answer = responses[Math.floor(Math.random() * responses.length)];
+    return message.reply(`🎱 | **${message.author.username}**, ${answer}`);
+  },
+
+  choose: async (message, args) => {
+    const raw = args.join(' ');
+    if (!raw) {
+      return message.reply(`❌ Give me choices! Example: \`owo choose pizza or burgers\` or \`owo choose cat, dog, bird\``);
+    }
+
+    let choices = [];
+    if (raw.includes(' or ')) {
+      choices = raw.split(' or ').map(c => c.trim()).filter(Boolean);
+    } else if (raw.includes(',')) {
+      choices = raw.split(',').map(c => c.trim()).filter(Boolean);
+    } else {
+      choices = args.filter(Boolean);
+    }
+
+    if (choices.length < 2) {
+      return message.reply(`❌ Please give at least 2 options separated by 'or' or comma!`);
+    }
+
+    const pick = choices[Math.floor(Math.random() * choices.length)];
+    return message.reply(`🤔 | I choose... **${pick}**! ${getRandomFace()}`);
+  },
+
+  roll: async (message, args) => {
+    let max = 100;
+    if (args[0]) {
+      const parsed = parseInt(args[0], 10);
+      if (!isNaN(parsed) && parsed > 0) max = Math.min(parsed, 1000000);
+    }
+
+    const result = Math.floor(Math.random() * max) + 1;
+    return message.reply(`🎲 | **${message.author.username}** rolled a **${result}** (1-${max})!`);
   }
 };

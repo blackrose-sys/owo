@@ -1,7 +1,7 @@
 // OwO text transformation, cute emojis, faces and action assets
 
 const OWO_FACES = [
-  '(・`ω´・)', ';;w;;', 'owo', 'OwO', 'UwU', '>w<', '^w^', '(˘ω˘)', 
+  '(・`ω´・)', ';;w;;', 'owo', 'OwO', 'UwU', '>w<', '^w^', '(˘ω˘)',
   '(´・ω・`)', 'σωσ', 'x3', ' rawr x3', '(◕‿◕✿)', '(✿◠‿◠)', '(ﾉ´ヮ`)ﾉ*: ･ﾟ'
 ];
 
@@ -69,6 +69,10 @@ const ACTION_GIFS = {
     'https://media.giphy.com/media/10Am8idu3qBYRy/giphy.gif',
     'https://media.giphy.com/media/xT0BKiwgIPGShJNi0g/giphy.gif',
     'https://media.giphy.com/media/AlsIdbROVJ2Lu/giphy.gif'
+  ],
+  dambi: [
+    'https://media.tenor.com/X3lqFO1RFZoAAAAC/dambi.gif',
+    'https://media.tenor.com/X3lqFO1RFZoAAAAM/dambi.gif'
   ],
   sex: [
     'https://media.giphy.com/media/OpfkuToK5NLig/giphy.gif',

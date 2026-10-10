@@ -47,7 +47,7 @@ const COMMANDS = {
   weject: social.eject,
   voteoff: social.eject,
 
-  // Zoo
+  // Zoo & Compendium
   hunt: zoo.hunt,
   h: zoo.hunt,
   zoo: zoo.zoo,
@@ -56,6 +56,11 @@ const COMMANDS = {
   sacrifice: zoo.sacrifice,
   sc: zoo.sacrifice,
   display: zoo.display,
+  owodex: zoo.owodex,
+  dex: zoo.owodex,
+  autohunt: zoo.autohunt,
+  ah: zoo.autohunt,
+  rename: zoo.rename,
 
   // Gambling
   coinflip: gambling.coinflip,
@@ -70,43 +75,71 @@ const COMMANDS = {
   highlow: gambling.highlow,
   hl: gambling.highlow,
   whl: gambling.highlow,
+  mines: gambling.mines,
+  m: gambling.mines,
+  wm: gambling.mines,
+  snailgarden: gambling.snailgarden,
+  snail: gambling.snailgarden,
+  snails: gambling.snailgarden,
 
-  // Battle
+  // Battle & Weapons
   battle: battle.battle,
   b: battle.battle,
   fight: battle.battle,
   team: battle.team,
   t: battle.team,
+  tm: battle.team,
+  owotm: battle.team,
+  wtm: battle.team,
+  wt: battle.team,
   weapon: battle.weapon,
   weapons: battle.weapon,
   wp: battle.weapon,
+  owow: battle.weapon,
+  ww: battle.weapon,
   equip: battle.equip,
   wequip: battle.equip,
   eq: battle.equip,
   we: battle.equip,
+  dismantle: battle.dismantle,
+  boss: battle.boss,
 
-  // Shop & Inventory
+  // Shop, Crates & Unboxing
   shop: shop.shop,
   buy: shop.buy,
   inv: shop.inventory,
   inventory: shop.inventory,
   i: shop.inventory,
   use: shop.use,
-  crate: shop.use, // if user runs 'owo crate'
+  open: shop.use,
+  crate: shop.use,
   crates: shop.use,
+  lootbox: shop.use,
+  lb: shop.use,
+  box: shop.use,
+  boxes: shop.use,
 
-  // Social & RP
+  // Social, Fun & RP
   marry: social.marry,
   divorce: social.divorce,
   owoify: social.owoify,
   avatar: social.avatar,
   av: social.avatar,
   pfp: social.avatar,
+  ship: social.ship,
+  '8b': social.eightball,
+  eightball: social.eightball,
+  choose: social.choose,
+  roll: social.roll,
+  dambi: (message, args) => social.action(message, 'dambi', args),
+  wdambi: (message, args) => social.action(message, 'dambi', args),
 
   // Profile & System
   profile: profile.profile,
   my: profile.profile,
   p: profile.profile,
+  level: profile.profile,
+  lvl: profile.profile,
   top: profile.top,
   lb: profile.top,
   leaderboard: profile.top,
@@ -118,7 +151,7 @@ const COMMANDS = {
 
 const SOCIAL_ACTIONS = [
   // Inter-personal Actions
-  'punch', 'sex', 'dogstyle', 'doggystyle', 'hug', 'kiss', 'pat', 'pats', 'slap', 'bite', 'cuddle',
+  'dambi', 'punch', 'sex', 'dogstyle', 'doggystyle', 'hug', 'kiss', 'pat', 'pats', 'slap', 'bite', 'cuddle',
   'poke', 'lick', 'nom', 'stare', 'highfive', 'wave', 'greet', 'handholding',
   'hold', 'tickle', 'kill', 'boop', 'snuggle', 'bully',
   // Emotes & Expressions

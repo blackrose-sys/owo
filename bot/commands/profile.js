@@ -99,46 +99,32 @@ module.exports = {
     }
 
     const embed = new EmbedBuilder()
-      .setColor('#8a7ff8')
-      .setTitle(`✨ OwO Bot — Command Guide & Handbook ${getRandomFace()}`)
+      .setColor('#2b2d31')
       .setDescription(
-        `Welcome to OwO! All commands can be run with \`owo <command>\`, \`w <command>\`, or shortcut prefixes (e.g. \`wequip\`, \`wh\`, \`ws all\`, \`wbj all\`).\n\n` +
-        `🪙 **ECONOMY & DAILY**\n` +
-        `• \`owo daily\` (\`wdaily\`) — Claim daily Cowoncy + streak bonus + crates\n` +
-        `• \`owo cash\` (\`wcash\`, \`wbal\`) — Check your wallet balance\n` +
-        `• \`owo give @user <amount>\` — Send Cowoncy to a friend\n` +
-        `• \`owo quest\` (\`wcl\`) — Complete daily checklist for huge rewards\n` +
-        `• \`owo pray / curse [@user]\` — Boost luck or curse someone\n\n` +
-        `🐾 **ANIMALS & ZOO**\n` +
-        `• \`owo hunt\` (\`wh\`) — Catch wild animals (Common to Gem tier)\n` +
-        `• \`owo zoo\` (\`wzoo\`) — View your complete animal collection\n` +
-        `• \`owo display <animal>\` — Set animal as your profile mascot\n` +
-        `• \`owo sell <all/tier/name>\` — Sell duplicate animals for Cowoncy\n` +
-        `• \`owo sacrifice <all/name>\` — Convert animals into magical Essence\n\n` +
-        `🎰 **GAMBLING & CASINO**\n` +
-        `• \`owo cf <amount> [h/t]\` (\`wcf\`) — Coinflip double or nothing\n` +
-        `• \`owo slots <amount>\` (\`ws\`) — Spin slot machine for 10x jackpot\n` +
-        `• \`owo bj <amount>\` (\`wbj\`) — Interactive Blackjack with Hit/Stand buttons\n` +
-        `• \`owo highlow <amount>\` (\`whl\`) — Authentic Higher or Lower streak\n` +
-        `• \`owo roulette <amount> <space>\` — Roulette betting\n\n` +
-        `⚔️ **BATTLE & RPG**\n` +
-        `• \`owo battle\` (\`wb\`) — Dungeon monster battles for Cowoncy & weapons\n` +
-        `• \`owo team\` — View & configure your 3-animal battle champions\n` +
-        `• \`wequip\` / \`owo equip <name/num>\` — Equip weapons to boost team power\n` +
-        `• \`owo weapon\` — View armory weapons and stats\n\n` +
-        `🛍️ **SHOP & INVENTORY**\n` +
-        `• \`owo shop\` — Browse crates, love rings, gems, and consumables\n` +
-        `• \`owo buy <item> [qty]\` — Buy items from the shop\n` +
-        `• \`owo inv\` — View your inventory and crates\n` +
-        `• \`owo use <item>\` — Open crates or activate luck gems\n\n` +
-        `💖 **SOCIAL & PROFILE**\n` +
-        `• \`owo marry @user\` — Propose marriage with Love Ring!\n` +
-        `• \`owo hug / kiss / pat / slap / bite / cuddle @user\` — Anime actions\n` +
-        `• \`owo owoify <text>\` — Turn any text into cute OwO speak\n` +
-        `• \`owo profile\` / \`my\` — View complete player card\n` +
-        `• \`owo top\` — Global Cowoncy & Hunter leaderboards`
+        `Here is the list of commands!\n` +
+        `For more info on a specific command, use \`owo help {command}\`\n\n` +
+        `🏅 **Rankings**\n` +
+        `\`top\` \`my\`\n\n` +
+        `💰 **Economy**\n` +
+        `\`cowoncy\` \`give\` \`daily\` \`vote\` \`quest\` \`checklist\` \`shop\` \`buy\`\n\n` +
+        `🌱 **Animals**\n` +
+        `\`zoo\` \`hunt\` \`sell\` \`sacrifice\` \`battle\` \`inv\` \`equip\` \`autohunt\` \`owodex\` \`lootbox\` \`crate\` \`team\` \`weapon\` \`rename\` \`dismantle\` \`boss\`\n\n` +
+        `🎲 **Gambling**\n` +
+        `\`slots\` \`coinflip\` \`lottery\` \`blackjack\` \`snailgarden\` \`mines\` \`highlow\`\n\n` +
+        `🎱 **Fun**\n` +
+        `\`8b\` \`define\` \`gif\` \`pic\` \`translate\` \`roll\` \`choose\` \`bell\`\n\n` +
+        `🎭 **Social**\n` +
+        `\`cookie\` \`ship\` \`pray\` \`curse\` \`marry\` \`emoji\` \`profile\` \`level\` \`wallpaper\` \`owoify\` \`avatar\`\n\n` +
+        `😂 **Meme Generation**\n` +
+        `\`spongebobchicken\` \`slapcar\` \`isthisa\` \`drake\` \`distractedbf\` \`communismcat\` \`eject\` \`emergencymeeting\` \`headpat\` \`tradeoffer\` \`waddle\`\n\n` +
+        `😃 **Emotes**\n` +
+        `\`blush\` \`cry\` \`dance\` \`lewd\` \`pout\` \`shrug\` \`sleepy\` \`smile\` \`smug\` \`thumbsup\` \`wag\` \`thinking\` \`triggered\` \`teehee\` \`deredere\` \`thonking\` \`scoff\` \`happy\` \`thumbs\` \`grin\`\n\n` +
+        `🤗 **Actions**\n` +
+        `\`cuddle\` \`hug\` \`kiss\` \`lick\` \`nom\` \`pat\` \`poke\` \`slap\` \`stare\` \`highfive\` \`bite\` \`greet\` \`punch\` \`handholding\` \`tickle\` \`kill\` \`hold\` \`pats\` \`wave\` \`boop\` \`snuggle\` \`bully\` \`dambi\`\n\n` +
+        `🔧 **Utility**\n` +
+        `\`ping\` \`stats\` \`link\` \`guildlink\` \`disable\` \`censor\` \`patreon\` \`announcement\` \`rules\` \`suggest\` \`shards\` \`math\` \`color\` \`prefix\``
       )
-      .setFooter({ text: `OwO Bot • 100000x Better, Smooth, 100% Reliable` });
+      .setFooter({ text: `OwO Bot • 100000x Better, Smooth & Authentic` });
 
     return message.reply({ embeds: [embed] });
   }

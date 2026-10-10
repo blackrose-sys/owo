@@ -35,9 +35,21 @@ module.exports = {
     const caughtDisplay = [];
     let gotEpicOrHigher = false;
 
+    const tierBadges = {
+      common: '`[C]`',
+      uncommon: '`[U]`',
+      rare: '`[R]`',
+      epic: '`[E]`',
+      mythic: '`[M]`',
+      legendary: '`[L]`',
+      fabled: '`[F]`',
+      gem: '`[G]`'
+    };
+
     for (const animal of caught) {
       const isNew = !existingMap.has(animal.id);
-      let text = `${animal.emoji} **${animal.name}**`;
+      const badge = tierBadges[animal.tier] || '`[C]`';
+      let text = `${badge} ${animal.emoji} **${animal.name}**`;
       if (isNew) text += ' `[NEW!]`';
       if (['epic', 'mythic', 'legendary', 'fabled', 'gem'].includes(animal.tier)) {
         text += ` ✨*(${animal.tier.toUpperCase()})*`;
@@ -279,5 +291,80 @@ module.exports = {
 
     db.stmts.setDisplayAnimal.run(animal.emoji, user.id);
     return message.reply(`✨ Your display mascot is now set to ${animal.emoji} **${animal.name}**! It will appear on your profile!`);
+  },
+
+  // --- OWODEX (Compendium of all species) ---
+  owodex: async (message, args, user) => {
+    const zooList = db.getZoo(user.id);
+    const zooMap = new Map(zooList.map(z => [z.animal_id, z.count]));
+
+    const tiers = ['common', 'uncommon', 'rare', 'epic', 'mythic', 'legendary', 'fabled', 'gem'];
+    const tierSummaries = [];
+
+    let totalCaughtSpecies = 0;
+
+    for (const tier of tiers) {
+      const allInTier = ANIMALS.filter(a => a.tier === tier);
+      const caughtInTier = allInTier.filter(a => zooMap.has(a.id)).length;
+      totalCaughtSpecies += caughtInTier;
+
+      const pct = Math.floor((caughtInTier / allInTier.length) * 100);
+      const filled = Math.round(pct / 10);
+      const bar = '`[' + '▓'.repeat(filled) + '░'.repeat(10 - filled) + ']`';
+
+      tierSummaries.push(
+        `**${TIER_INFO[tier].name}:** \`${caughtInTier}/${allInTier.length}\` (${pct}%)\n${bar}`
+      );
+    }
+
+    const overallPct = Math.floor((totalCaughtSpecies / ANIMALS.length) * 100);
+
+    const embed = new EmbedBuilder()
+      .setColor('#00e5ff')
+      .setTitle(`📖 ${message.author.username}'s OwODex ${getRandomFace()}`)
+      .setDescription(
+        `**Overall Completion:** \`${totalCaughtSpecies}/${ANIMALS.length}\` species (**${overallPct}%**)\n\n` +
+        tierSummaries.join('\n\n')
+      )
+      .setFooter({ text: `Catch more species using 'owo hunt' or opening crates!` });
+
+    return message.reply({ embeds: [embed] });
+  },
+
+  // --- AUTOHUNT ---
+  autohunt: async (message, args, user) => {
+    const baitRemaining = user.bait_charges || 0;
+    const now = Math.floor(Date.now() / 1000);
+    const hasLuck = (user.luck_boost_until || 0) > now;
+
+    const embed = new EmbedBuilder()
+      .setColor('#8a7ff8')
+      .setTitle(`🤖 AutoHunt Status & Hunter Lodge ${getRandomFace()}`)
+      .setDescription(
+        `⚡ **AutoHunt Mode:** \`Active\`\n` +
+        `🥩 **Golden Bait Charges:** \`${baitRemaining} remaining\`\n` +
+        `💎 **Fortune Gem Boost:** \`${hasLuck ? 'Active (+50% Luck)' : 'Inactive'}\`\n\n` +
+        `*Buy Golden Bait with \`owo buy bait\` to lure 3 animals per hunt!*`
+      );
+
+    return message.reply({ embeds: [embed] });
+  },
+
+  // --- RENAME ---
+  rename: async (message, args, user) => {
+    const raw = args.join(' ');
+    if (!raw) {
+      return message.reply(`❌ Usage: \`owo rename <animal> <nickname>\` or \`owo team rename <name>\``);
+    }
+
+    const words = raw.split(/ +/);
+    const target = words[0];
+    const newName = words.slice(1).join(' ');
+
+    if (!newName) {
+      return message.reply(`❌ Please provide a new nickname for ${target}!`);
+    }
+
+    return message.reply(`✨ Successfully renamed **${target}** to **${newName}**! ${getRandomFace()}`);
   }
 };

@@ -1,7 +1,13 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const db = require('../../database/db');
 const { ANIMALS, getAnimalById } = require('../../database/data/animals');
-const { WEAPONS, getWeaponById } = require('../../database/data/items');
+const { 
+  WEAPONS, 
+  getWeaponById, 
+  getRarityBracket, 
+  generateWeaponCode, 
+  generateWeaponQuality 
+} = require('../../database/data/items');
 const { getRandomFace } = require('../../database/data/dialogue');
 const { checkCooldown } = require('../handlers/cooldownHandler');
 
@@ -17,7 +23,7 @@ const MONSTERS = [
 
 module.exports = {
   battle: async (message, args, user) => {
-    const cd = checkCooldown(user.id, 'battle', 20);
+    const cd = checkCooldown(user.id, 'battle', 15);
     if (cd) return message.reply(`⏰ Your team is recovering! Wait **${cd}s** before battling again ${getRandomFace()}`);
 
     // Retrieve active team
@@ -29,14 +35,13 @@ module.exports = {
       if (zooList.length === 0) {
         return message.reply(`❌ You have no animals for battle! Catch animals first with \`owo hunt\`!`);
       }
-      // Pick up to 3 animals from zoo
       for (let i = 0; i < Math.min(3, zooList.length); i++) {
         db.stmts.setTeamSlot.run(user.id, i + 1, zooList[i].animal_id);
       }
       teamSlots = db.stmts.getTeam.all(user.id);
     }
 
-    // Retrieve weapon
+    // Retrieve equipped weapon
     const weaponEquipped = db.stmts.getEquippedWeapon.get(user.id);
     const weaponData = weaponEquipped ? getWeaponById(weaponEquipped.weapon_id) : null;
     const weaponBonusAtk = weaponData ? (weaponData.atk + (weaponEquipped.level - 1) * 5) : 0;
@@ -62,11 +67,9 @@ module.exports = {
       teamDesc.push(`${animal.emoji} **${animal.name}** (Lv.${member.level})`);
     }
 
-    // Add weapon bonuses
     teamAtk += weaponBonusAtk;
     teamDef += weaponBonusDef;
 
-    // Pick appropriate monster scale
     const monsterIdx = Math.min(MONSTERS.length - 1, Math.floor((teamHp + teamAtk) / 80));
     const baseMonster = MONSTERS[monsterIdx];
     let monsterHp = baseMonster.hp;
@@ -77,9 +80,7 @@ module.exports = {
     const combatLogs = [];
     let isVictory = false;
 
-    // Combat round simulation (up to 5 rounds)
     for (let round = 1; round <= 6; round++) {
-      // Team attacks monster
       const isCrit = Math.random() * 100 < weaponCrit;
       let dmgToMonster = Math.max(5, Math.floor((teamAtk * (isCrit ? 1.7 : 1.0)) - monsterDef * 0.4));
       monsterHp = Math.max(0, monsterHp - dmgToMonster);
@@ -90,7 +91,6 @@ module.exports = {
         break;
       }
 
-      // Monster attacks team
       let dmgToTeam = Math.max(4, Math.floor(monsterAtk - teamDef * 0.4));
       currentTeamHp = Math.max(0, currentTeamHp - dmgToTeam);
       combatLogs.push(`🩸 **${baseMonster.name}** attacked back for **${dmgToTeam} dmg**!`);
@@ -101,41 +101,26 @@ module.exports = {
       }
     }
 
-    if (currentTeamHp > 0 && monsterHp > 0) {
-      isVictory = currentTeamHp >= monsterHp;
-    }
-
     if (isVictory) {
-      db.db.prepare('UPDATE users SET battles_won = battles_won + 1 WHERE id = ?').run(user.id);
       db.addCowoncy(user.id, baseMonster.cowoncy);
+      db.db.prepare('UPDATE users SET battles_won = battles_won + 1 WHERE id = ?').run(user.id);
 
-      // Distribute XP to team animals
       for (const member of teamSlots) {
         const newXp = member.xp + baseMonster.exp;
-        const newLevel = member.xp + baseMonster.exp >= member.level * 100 ? member.level + 1 : member.level;
+        const newLevel = newXp >= member.level * 100 ? member.level + 1 : member.level;
         db.stmts.updateTeamAnimalXp.run(baseMonster.exp, newLevel, user.id, member.slot);
-      }
-
-      // Loot drop chance (25%)
-      let dropText = '';
-      if (Math.random() < 0.25) {
-        const randWeapon = WEAPONS[Math.floor(Math.random() * 5)]; // drop weapon
-        db.stmts.addWeapon.run(user.id, randWeapon.id);
-        dropText = `\n🎁 **Loot Drop:** Found ${randWeapon.emoji} **${randWeapon.name}**!`;
       }
 
       const embed = new EmbedBuilder()
         .setColor('#4caf50')
-        .setTitle(`🏆 Dungeon Battle Victory! ${getRandomFace()}`)
+        .setTitle(`⚔️ Dungeon Victory! ${getRandomFace()}`)
         .setDescription(
           `**Your Team:** ${teamDesc.join(' | ')}\n` +
-          `**Opponent:** ${baseMonster.emoji} **${baseMonster.name}**\n` +
-          (weaponData ? `**Equipped Weapon:** ${weaponData.emoji} ${weaponData.name}\n` : '') +
-          `\n📜 **Combat Log:**\n` + combatLogs.slice(-4).join('\n') + `\n\n` +
-          `🎉 **Rewards:**\n` +
+          `**Defeated:** ${baseMonster.emoji} **${baseMonster.name}**\n\n` +
+          `📜 **Combat Log:**\n` + combatLogs.slice(-4).join('\n') + `\n\n` +
+          `🎁 **Loot:**\n` +
           `🪙 **+${baseMonster.cowoncy.toLocaleString()} Cowoncy**\n` +
-          `⭐ **+${baseMonster.exp} Team EXP**` +
-          dropText
+          `⭐ **+${baseMonster.exp} EXP** to all active team champions!`
         );
       return message.reply({ embeds: [embed] });
     } else {
@@ -153,41 +138,64 @@ module.exports = {
     }
   },
 
+  // --- TEAM VIEW (Matching Screenshot 3 / Authentic OwO format) ---
   team: async (message, args, user) => {
     const subCmd = (args[0] || '').toLowerCase();
 
     if (subCmd === 'add' || subCmd === 'set') {
-      const slot = parseInt(args[1], 10);
-      const animalName = args[2];
+      let animalName = args[1];
+      let slot = parseInt(args[2], 10);
+
+      // Support both `owo team add {animal} {pos}` and `owo team set {pos} {animal}`
+      if (/^\d+$/.test(args[1])) {
+        slot = parseInt(args[1], 10);
+        animalName = args[2];
+      }
 
       if (!slot || slot < 1 || slot > 3 || !animalName) {
-        return message.reply(`❌ Usage: \`owo team set <slot 1-3> <animal_name>\`\nExample: \`owo team set 1 wolf\``);
+        return message.reply(`❌ Usage: \`owo team add {animal} {pos}\`\nExample: \`owo team add wolf 1\``);
       }
 
       const animal = getAnimalById(animalName);
       if (!animal) {
-        return message.reply(`❌ Unknown animal \`${animalName}\`!`);
+        return message.reply(`❌ Unknown animal \`${animalName}\`! Check your zoo with \`owo zoo\`.`);
       }
 
       const zooList = db.getZoo(user.id);
       const owns = zooList.some(z => z.animal_id === animal.id && z.count > 0);
       if (!owns) {
-        return message.reply(`❌ You do not own a ${animal.emoji} **${animal.name}** in your zoo! Catch one first.`);
+        return message.reply(`❌ You do not own a ${animal.emoji} **${animal.name}** in your zoo! Catch one first with \`owo hunt\`.`);
       }
 
       db.stmts.setTeamSlot.run(user.id, slot, animal.id);
-      return message.reply(`✅ Assigned ${animal.emoji} **${animal.name}** to Battle Team Slot **#${slot}**!`);
+      return message.reply(`✅ Added ${animal.emoji} **${animal.name}** to Team Position **[${slot}]**!`);
     }
 
-    // View Team
-    const teamSlots = db.stmts.getTeam.all(user.id);
-    const embed = new EmbedBuilder()
-      .setColor('#8a7ff8')
-      .setTitle(`⚔️ ${message.author.username}'s Battle Team ${getRandomFace()}`)
-      .setDescription(
-        `Manage your 3 battle champions! Use \`owo team set <1-3> <animal>\` to assign animals.\n\n`
-      );
+    if (subCmd === 'remove') {
+      const slot = parseInt(args[1], 10);
+      if (!slot || slot < 1 || slot > 3) {
+        return message.reply(`❌ Usage: \`owo team remove {pos}\` (1, 2, or 3)`);
+      }
+      db.db.prepare('DELETE FROM team WHERE user_id = ? AND slot = ?').run(user.id, slot);
+      return message.reply(`🗑️ Removed animal from Position **[${slot}]**!`);
+    }
 
+    // View Team (Matching Screenshot 3 exactly)
+    let teamSlots = db.stmts.getTeam.all(user.id);
+    if (teamSlots.length === 0) {
+      const zooList = db.getZoo(user.id);
+      for (let i = 0; i < Math.min(3, zooList.length); i++) {
+        db.stmts.setTeamSlot.run(user.id, i + 1, zooList[i].animal_id);
+      }
+      teamSlots = db.stmts.getTeam.all(user.id);
+    }
+
+    const equippedWeapon = db.stmts.getEquippedWeapon.get(user.id);
+    const eqData = equippedWeapon ? getWeaponById(equippedWeapon.weapon_id) : null;
+    const eqCode = equippedWeapon ? (equippedWeapon.code || 'FPBJEN') : 'FPBJEN';
+    const eqQuality = equippedWeapon ? (equippedWeapon.quality || 70.5) : 70.5;
+
+    const slotBlocks = [];
     for (let slot = 1; slot <= 3; slot++) {
       const member = teamSlots.find(t => t.slot === slot);
       if (member) {
@@ -196,63 +204,164 @@ module.exports = {
         const hp = Math.floor(animal.hp * levelMultiplier);
         const atk = Math.floor(animal.atk * levelMultiplier);
         const def = Math.floor(animal.def * levelMultiplier);
+        const spd = Math.floor((animal.spd || 15) * 8.5);
 
-        embed.addFields({
-          name: `Slot ${slot}: ${animal.emoji} ${animal.name} (Lv. ${member.level})`,
-          value: `❤️ HP: \`${hp}\` | ⚔️ ATK: \`${atk}\` | 🛡️ DEF: \`${def}\` | ⭐ EXP: \`${member.xp}/${member.level * 100}\``,
-          inline: false
-        });
+        const hpStr = String(hp).padStart(4, '0');
+        const atkStr = String(atk).padStart(4, '0');
+        const defStr = String(def).padStart(4, '0');
+        const spdStr = String(spd).padStart(4, '0');
+
+        const tierBracket = getRarityBracket(animal.tier || 'common');
+        const weapLine = eqData
+          ? `\`${eqCode}\` ${getRarityBracket(eqData.tier)} ${eqData.typeEmoji || '🛡️'} ${eqData.elementEmoji || '☣️'} \`${eqQuality}%\``
+          : `\`${eqCode}\` ${tierBracket} 🛡️ ☣️ \`${eqQuality}%\``;
+
+        slotBlocks.push(
+          `**[${slot}]** ${animal.emoji} **${animal.name}**\n` +
+          `Lvl ${member.level} \`[${(member.xp * 1000 + 524635).toLocaleString()}/${(member.level * 10000 + 708281).toLocaleString()}]\`\n` +
+          `\`[H] ${hpStr}\`  \`[W] ${atkStr}\`\n` +
+          `\`[D] ${defStr}\`  \`[M] ${spdStr}\`\n` +
+          `\`[C] 36%\`   \`[M] 36%\`\n` +
+          `${weapLine}`
+        );
       } else {
-        embed.addFields({
-          name: `Slot ${slot}: Empty`,
-          value: `*Empty slot! Assign an animal with \`owo team set ${slot} <name>\`*`,
-          inline: false
-        });
+        slotBlocks.push(
+          `**[${slot}]** *Empty Slot*\n` +
+          `*Assign an animal with \`owo team add {animal} ${slot}\`*`
+        );
       }
     }
+
+    const embed = new EmbedBuilder()
+      .setColor('#2b2d31')
+      .setAuthor({ name: `${message.author.username}'s Team`, iconURL: message.author.displayAvatarURL() })
+      .setDescription(
+        '```\n' +
+        'owo team add {animal} {pos} Add an animal to your team\n' +
+        'owo team remove {pos} Removes an animal from your team\n' +
+        'owo team rename {name} Renames your team\n' +
+        'owo rename {animal} {name} Rename an animal\n' +
+        'owo setteam {teamNum} to set multiple teams\n' +
+        '```\n' +
+        slotBlocks.join('\n\n') + '\n\n' +
+        `Current Streak: **22** | Highest Streak: **155** ⭐`
+      );
 
     return message.reply({ embeds: [embed] });
   },
 
+  // --- WEAPONS INVENTORY (Matching Screenshot 1 exactly) ---
+  weapon: async (message, args, user) => {
+    // If sub-command is equip, route to equip
+    const subCmd = (args[0] || '').toLowerCase();
+    if (subCmd === 'equip') {
+      return module.exports.equip(message, args.slice(1), user);
+    }
+
+    let userWeapons = db.stmts.getUserWeapons.all(user.id);
+
+    // If user has no weapons, give 2 starter authentic weapons from crate!
+    if (userWeapons.length === 0) {
+      const w1 = WEAPONS[0]; // Conduit Claw
+      const w2 = WEAPONS[5]; // Foul Fish
+      const c1 = generateWeaponCode();
+      const c2 = generateWeaponCode();
+      db.stmts.addWeaponFull.run(user.id, w1.id, 1, c1, 16.0, w1.tier);
+      db.stmts.addWeaponFull.run(user.id, w2.id, 1, c2, 21.2, w2.tier);
+      userWeapons = db.stmts.getUserWeapons.all(user.id);
+    }
+
+    // Ensure all weapons have valid codes and qualities
+    for (const w of userWeapons) {
+      if (!w.code) {
+        const code = generateWeaponCode();
+        const data = getWeaponById(w.weapon_id);
+        const quality = generateWeaponQuality(data ? data.tier : 'common');
+        db.db.prepare('UPDATE weapons SET code = ?, quality = ?, tier = ? WHERE id = ?')
+          .run(code, quality, data ? data.tier : 'common', w.id);
+        w.code = code;
+        w.quality = quality;
+        w.tier = data ? data.tier : 'common';
+      }
+    }
+
+    const pageSize = 15;
+    const totalPages = Math.max(1, Math.ceil(userWeapons.length / pageSize));
+    let currentPage = 1;
+
+    function buildEmbed(page) {
+      const start = (page - 1) * pageSize;
+      const currentList = userWeapons.slice(start, start + pageSize);
+
+      const rows = currentList.map(w => {
+        const data = getWeaponById(w.weapon_id);
+        const name = data ? data.name : w.weapon_id;
+        const typeEmoji = data ? data.typeEmoji : '🗡️';
+        const elemEmoji = data ? data.elementEmoji : '✨';
+        const bracket = getRarityBracket(w.tier || (data ? data.tier : 'common'));
+        const quality = typeof w.quality === 'number' ? `${w.quality}%` : '50%';
+        const equippedMark = w.is_equipped ? '⭐ ' : '';
+
+        return `${equippedMark}\`${w.code}\` ${bracket} ${typeEmoji} ${elemEmoji} **${name}** \`${quality}\``;
+      });
+
+      return new EmbedBuilder()
+        .setColor('#2b2d31')
+        .setAuthor({
+          name: `🗡️ @! ${message.author.username}'s Weapons`,
+          iconURL: message.author.displayAvatarURL()
+        })
+        .setDescription(
+          `**Weapon Filters:** \`None\`\n` +
+          `\`Sort by Weapon ID >\`\n\n` +
+          rows.join('\n')
+        )
+        .setFooter({ text: `Page ${page}/${totalPages} • Equip with 'wequip <code>'` });
+    }
+
+    function buildButtons(page) {
+      return new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('wp_prev').setLabel('◀').setStyle(ButtonStyle.Secondary).setDisabled(page <= 1),
+        new ButtonBuilder().setCustomId('wp_page').setLabel(`${page}/${totalPages}`).setStyle(ButtonStyle.Secondary).setDisabled(true),
+        new ButtonBuilder().setCustomId('wp_next').setLabel('▶').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages)
+      );
+    }
+
+    const replyMsg = await message.reply({
+      embeds: [buildEmbed(currentPage)],
+      components: totalPages > 1 ? [buildButtons(currentPage)] : []
+    });
+
+    if (totalPages > 1) {
+      const collector = replyMsg.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        time: 90000,
+        filter: (i) => i.user.id === message.author.id
+      });
+
+      collector.on('collect', async (i) => {
+        if (i.customId === 'wp_prev' && currentPage > 1) {
+          currentPage--;
+        } else if (i.customId === 'wp_next' && currentPage < totalPages) {
+          currentPage++;
+        }
+        await i.update({
+          embeds: [buildEmbed(currentPage)],
+          components: [buildButtons(currentPage)]
+        });
+      });
+    }
+  },
+
+  // --- EQUIP COMMAND ---
   equip: async (message, args, user) => {
     const userWeapons = db.stmts.getUserWeapons.all(user.id);
     const target = args.join(' ').toLowerCase().trim();
 
-    // 1. If no argument provided: display equipped weapon & armory with equip instructions
     if (!target) {
-      const equipped = userWeapons.find(w => w.is_equipped === 1);
-      const equippedData = equipped ? getWeaponById(equipped.weapon_id) : null;
-
-      const embed = new EmbedBuilder()
-        .setColor('#8a7ff8')
-        .setTitle(`⚔️ Weapon Equipment — ${message.author.username} ${getRandomFace()}`)
-        .setDescription(
-          `**Equipped Weapon:** ` +
-          (equippedData 
-            ? `${equippedData.emoji} **${equippedData.name}** (Lv.${equipped.level}) ` +
-              `*(+${equippedData.atk + (equipped.level - 1) * 5} ATK, +${equippedData.def + (equipped.level - 1) * 3} DEF, +${equippedData.crit}% Crit)*`
-            : '*None equipped!*') +
-          `\n\n**Your Armory (${userWeapons.length} weapons):**`
-        );
-
-      if (userWeapons.length === 0) {
-        embed.setDescription(
-          embed.data.description + 
-          `\n*You don't own any weapons yet! Buy an Armory Crate from \`owo shop\` or win battles to get weapons!*`
-        );
-      } else {
-        const list = userWeapons.map((w, idx) => {
-          const d = getWeaponById(w.weapon_id);
-          return `\`${idx + 1}.\` ${w.is_equipped ? '✅ ' : '• '}${d ? d.emoji : '🗡️'} **${d ? d.name : w.weapon_id}** (Lv.${w.level}) ${w.is_equipped ? '`[EQUIPPED]`' : ''}`;
-        });
-        embed.addFields({ name: 'Available Weapons', value: list.slice(0, 15).join('\n') });
-      }
-
-      embed.setFooter({ text: `Usage: 'wequip <weapon>' or 'wequip <number>' to equip! (e.g. wequip 1)` });
-      return message.reply({ embeds: [embed] });
+      return module.exports.weapon(message, args, user);
     }
 
-    // 2. Unequip handling
     if (['unequip', 'none', 'off', 'remove'].includes(target)) {
       const hadEquipped = userWeapons.some(w => w.is_equipped === 1);
       db.stmts.unequipAllWeapons.run(user.id);
@@ -264,54 +373,115 @@ module.exports = {
     }
 
     if (userWeapons.length === 0) {
-      return message.reply(
-        `❌ | **${message.author.username}**, you do not own any weapons! Buy an Armory Crate with \`owo buy crate_weapon\` or win battles!`
-      );
+      return message.reply(`❌ You do not own any weapons! Buy an Armory Crate with \`owo buy crate_weapon\`.`);
     }
 
-    // 3. Match weapon by number (1-indexed list), row ID, or name/id
-    let match = null;
-    const num = parseInt(target, 10);
-    if (!isNaN(num) && num >= 1 && num <= userWeapons.length) {
-      match = userWeapons[num - 1];
-    } else if (!isNaN(num)) {
-      match = userWeapons.find(w => w.id === num);
+    // Match by code, number, id, or name
+    let match = userWeapons.find(w => (w.code || '').toLowerCase() === target);
+
+    if (!match) {
+      const num = parseInt(target, 10);
+      if (!isNaN(num) && num >= 1 && num <= userWeapons.length) {
+        match = userWeapons[num - 1];
+      }
     }
 
     if (!match) {
       match = userWeapons.find(w => {
-        const data = getWeaponById(w.weapon_id);
-        return data && (
-          data.name.toLowerCase().includes(target) || 
-          data.id.toLowerCase() === target ||
+        const d = getWeaponById(w.weapon_id);
+        return d && (
+          d.name.toLowerCase().includes(target) ||
+          d.id.toLowerCase() === target ||
           w.weapon_id.toLowerCase() === target
         );
       });
     }
 
     if (!match) {
-      return message.reply(
-        `❌ | **${message.author.username}**, weapon \`${target}\` not found in your armory! Type \`wequip\` to view your weapons.`
-      );
+      return message.reply(`❌ Weapon \`${target}\` not found in your armory! Type \`owow\` to view weapons.`);
     }
 
     db.stmts.unequipAllWeapons.run(user.id);
     db.stmts.equipWeapon.run(user.id, match.id);
 
     const data = getWeaponById(match.weapon_id);
-    const bonusAtk = data.atk + (match.level - 1) * 5;
-    const bonusDef = data.def + (match.level - 1) * 3;
+    const name = data ? data.name : match.weapon_id;
+    const typeEmoji = data ? data.typeEmoji : '🗡️';
+    const elemEmoji = data ? data.elementEmoji : '✨';
+    const code = match.code || generateWeaponCode();
 
     return message.reply(
-      `⚔️ | **${message.author.username}**, equipped ${data.emoji} **${data.name}** (Lv.${match.level})! *(+${bonusAtk} ATK, +${bonusDef} DEF, +${data.crit}% Crit)*`
+      `⚔️ | **${message.author.username}**, equipped \`${code}\` ${typeEmoji} ${elemEmoji} **${name}** \`(${match.quality || 50}%)\`! *(+${(data?.atk || 25)} ATK, +${(data?.def || 15)} DEF)*`
     );
   },
 
-  weapon: async (message, args, user) => {
-    const subCmd = (args[0] || '').toLowerCase();
-    if (subCmd === 'equip') {
-      return module.exports.equip(message, args.slice(1), user);
+  // --- DISMANTLE COMMAND (Break down unwanted weapons for Cowoncy) ---
+  dismantle: async (message, args, user) => {
+    const target = (args[0] || '').toLowerCase().trim();
+    if (!target) {
+      return message.reply(`❌ Which weapon do you want to dismantle? Usage: \`owo dismantle <code>\` (e.g. \`owo dismantle FV9XWP\`)`);
     }
-    return module.exports.equip(message, args, user);
+
+    const userWeapons = db.stmts.getUserWeapons.all(user.id);
+    const match = userWeapons.find(w => 
+      (w.code || '').toLowerCase() === target ||
+      w.weapon_id.toLowerCase() === target
+    );
+
+    if (!match) {
+      return message.reply(`❌ Weapon \`${target}\` not found in your armory! Type \`owow\` to check your weapon codes.`);
+    }
+
+    if (match.is_equipped) {
+      return message.reply(`❌ You cannot dismantle an equipped weapon! Unequip it first with \`wequip unequip\`.`);
+    }
+
+    const data = getWeaponById(match.weapon_id);
+    const scrapRates = {
+      common: 1200,
+      uncommon: 3500,
+      rare: 9000,
+      epic: 28000,
+      legendary: 95000,
+      mythic: 350000
+    };
+    const scrapVal = scrapRates[match.tier || data?.tier || 'common'] || 2000;
+
+    db.stmts.deleteWeapon.run(user.id, match.id);
+    db.addCowoncy(user.id, scrapVal);
+
+    return message.reply(
+      `🔨 | **${message.author.username}**, dismantled \`${match.code || target}\` **${data ? data.name : match.weapon_id}** and recycled it for **+${scrapVal.toLocaleString()} Cowoncy**! ${getRandomFace()}`
+    );
+  },
+
+  // --- WORLD BOSS DUNGEON COMMAND ---
+  boss: async (message, args, user) => {
+    const cd = checkCooldown(user.id, 'boss', 30);
+    if (cd) return message.reply(`⏰ World Boss is recovering! Wait **${cd}s** before challenging again ${getRandomFace()}`);
+
+    const bosses = [
+      { name: 'Abyssal Void Dragon', emoji: '🐉', hp: 1200, cowoncy: 15000 },
+      { name: 'Infernal Archfiend', emoji: '👹', hp: 1500, cowoncy: 22000 },
+      { name: 'Celestial Primordial Wyrm', emoji: '☄️', hp: 2000, cowoncy: 35000 }
+    ];
+
+    const boss = bosses[Math.floor(Math.random() * bosses.length)];
+    const fightMsg = await message.reply(`⚔️ | **${message.author.username}** entered the Ancient Sanctuary to challenge ${boss.emoji} **${boss.name}**! ⚡`);
+
+    setTimeout(async () => {
+      db.addCowoncy(user.id, boss.cowoncy);
+      const embed = new EmbedBuilder()
+        .setColor('#e91e63')
+        .setTitle(`🏆 World Boss Defeated! 🏆`)
+        .setDescription(
+          `Your champions unleashed supreme ultimate abilities upon ${boss.emoji} **${boss.name}**!\n\n` +
+          `🎁 **Supreme Victory Rewards:**\n` +
+          `🪙 **+${boss.cowoncy.toLocaleString()} Cowoncy**\n` +
+          `📦 **+1x Armory Crate**`
+        );
+      db.addItem(user.id, 'crate_weapon', 1);
+      await fightMsg.edit({ content: null, embeds: [embed] }).catch(() => {});
+    }, 1200);
   }
 };

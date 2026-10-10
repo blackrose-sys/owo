@@ -15,19 +15,29 @@ const UNICODE_CARDS = {
   '♣': { 'A': '🃑', '2': '🃒', '3': '🃓', '4': '🃔', '5': '🃕', '6': '🃖', '7': '🃗', '8': '🃘', '9': '🃙', '10': '🃚', 'J': '🃛', 'Q': '🃝', 'K': '🃞' }
 };
 
+let CARDS_MAP = {};
+try {
+  CARDS_MAP = require('../../database/data/cards.json');
+} catch (e) {}
+
 function getCardEmoji(card, client = null) {
   if (!card) return '`[ 🂠 ? ]`';
   const cleanSuit = (card.suit || '').replace(/\uFE0F/g, '');
   const suitLetter = cleanSuit === '♠' ? 's' : cleanSuit === '♥' ? 'h' : cleanSuit === '♦' ? 'd' : 'c';
   const targetName = `c${card.value}${suitLetter}`.toLowerCase();
 
-  // 1. Check Discord application emojis
+  // 1. Direct application emoji from pre-deployed cards.json
+  if (CARDS_MAP[targetName]) {
+    return `<:${targetName}:${CARDS_MAP[targetName]}>`;
+  }
+
+  // 2. Check Discord application emojis cache
   if (client?.application?.emojis?.cache) {
     const appMatch = client.application.emojis.cache.find(e => e.name.toLowerCase() === targetName);
     if (appMatch) return appMatch.toString();
   }
 
-  // 2. Check guild emojis
+  // 3. Check guild emojis
   if (client?.emojis?.cache && typeof client.emojis.cache.find === 'function') {
     const guildMatch = client.emojis.cache.find(e => e.name.toLowerCase() === targetName);
     if (guildMatch) return guildMatch.toString();
@@ -37,13 +47,15 @@ function getCardEmoji(card, client = null) {
 }
 
 function getCardBackEmoji(client = null) {
-  // 1. Check Discord application emojis
+  if (CARDS_MAP['cback']) {
+    return `<:cback:${CARDS_MAP['cback']}>`;
+  }
+
   if (client?.application?.emojis?.cache) {
     const appMatch = client.application.emojis.cache.find(e => e.name.toLowerCase() === 'cback');
     if (appMatch) return appMatch.toString();
   }
 
-  // 2. Check guild emojis
   if (client?.emojis?.cache && typeof client.emojis.cache.find === 'function') {
     const guildMatch = client.emojis.cache.find(e => e.name.toLowerCase() === 'cback');
     if (guildMatch) return guildMatch.toString();
@@ -719,6 +731,196 @@ module.exports = {
     } else {
       return message.reply(`🎡 | The ball landed on **${rollColor} ${roll}**. You lost **-${bet.toLocaleString()}** cowoncy.`);
     }
+  },
+
+  // --- 5. MINES (Interactive Grid with Cash Out) ---
+  mines: async (message, args, user) => {
+    const cd = checkCooldown(user.id, 'mines', 3);
+    if (cd) return message.reply(`⏰ Please wait **${cd}s** before starting another mines game!`);
+
+    const bet = parseBet(args[0], user.cowoncy);
+    if (!bet || bet <= 0) {
+      return message.reply(`❌ Specify a valid bet amount! Usage: \`wmines <bet>\` (e.g. \`wmines 5000\`)`);
+    }
+    if (user.cowoncy < bet) {
+      return message.reply(`🚫 | **${message.author.username}**, you only have **${user.cowoncy.toLocaleString()}** cowoncy.`);
+    }
+
+    db.addCowoncy(user.id, -bet);
+
+    // 9 tiles, 2 mines randomly placed
+    const totalTiles = 9;
+    const mineCount = 2;
+    const minePositions = new Set();
+    while (minePositions.size < mineCount) {
+      minePositions.add(Math.floor(Math.random() * totalTiles));
+    }
+
+    const multipliers = [1.0, 1.28, 1.70, 2.35, 3.40, 5.20, 8.50, 16.0];
+    let revealedCount = 0;
+    const revealedSet = new Set();
+    let isGameOver = false;
+
+    function buildComponents(disabledAll = false, hitIndex = -1) {
+      const rows = [];
+      for (let r = 0; r < 3; r++) {
+        const row = new ActionRowBuilder();
+        for (let c = 0; c < 3; c++) {
+          const idx = r * 3 + c;
+          const btn = new ButtonBuilder().setCustomId(`mine_${idx}`);
+
+          if (revealedSet.has(idx)) {
+            btn.setEmoji('💎').setStyle(ButtonStyle.Success).setDisabled(true);
+          } else if (disabledAll) {
+            if (minePositions.has(idx)) {
+              btn.setEmoji(idx === hitIndex ? '💥' : '💣').setStyle(ButtonStyle.Danger).setDisabled(true);
+            } else {
+              btn.setEmoji('💎').setStyle(ButtonStyle.Secondary).setDisabled(true);
+            }
+          } else {
+            btn.setEmoji('❓').setStyle(ButtonStyle.Secondary);
+          }
+          row.addComponents(btn);
+        }
+        rows.push(row);
+      }
+
+      const currentMult = multipliers[revealedCount];
+      const cashoutVal = Math.floor(bet * currentMult);
+      const cashoutRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('mine_cashout')
+          .setLabel(`💰 Cash Out (+${cashoutVal.toLocaleString()})`)
+          .setStyle(ButtonStyle.Primary)
+          .setDisabled(revealedCount === 0 || disabledAll)
+      );
+      rows.push(cashoutRow);
+      return rows;
+    }
+
+    const embed = new EmbedBuilder()
+      .setColor('#2ecc71')
+      .setAuthor({ name: `${message.author.username}'s Mines Game`, iconURL: message.author.displayAvatarURL() })
+      .setDescription(
+        `💣 **Bet:** **${bet.toLocaleString()}** Cowoncy | **Mines:** 2 / 9\n` +
+        `💎 **Next Multiplier:** **${multipliers[revealedCount + 1]}x**\n\n` +
+        `Click a tile to reveal diamonds! Cash out anytime to lock in profits.`
+      );
+
+    const gameMsg = await message.reply({ embeds: [embed], components: buildComponents() });
+
+    const collector = gameMsg.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      time: 60000,
+      filter: (i) => i.user.id === message.author.id
+    });
+
+    collector.on('collect', async (interaction) => {
+      if (isGameOver) return;
+
+      if (interaction.customId === 'mine_cashout') {
+        isGameOver = true;
+        collector.stop('cashout');
+        const finalMult = multipliers[revealedCount];
+        const win = Math.floor(bet * finalMult);
+        db.addCowoncy(user.id, win);
+
+        const winEmbed = new EmbedBuilder()
+          .setColor('#57f287')
+          .setAuthor({ name: `${message.author.username} Cashed Out!`, iconURL: message.author.displayAvatarURL() })
+          .setDescription(
+            `🎉 You safely cashed out at **${finalMult}x** and won **+${win.toLocaleString()}** Cowoncy!\n` +
+            `💎 **Gems found:** ${revealedCount} / 7`
+          );
+
+        return interaction.update({ embeds: [winEmbed], components: buildComponents(true) });
+      }
+
+      const match = interaction.customId.match(/^mine_(\d+)$/);
+      if (!match) return;
+      const idx = parseInt(match[1], 10);
+
+      if (minePositions.has(idx)) {
+        // Hit a mine!
+        isGameOver = true;
+        collector.stop('boom');
+
+        const loseEmbed = new EmbedBuilder()
+          .setColor('#ed4245')
+          .setAuthor({ name: `${message.author.username} Hit a Mine!`, iconURL: message.author.displayAvatarURL() })
+          .setDescription(
+            `💥 **BOOM!** You stepped on a hidden mine!\n` +
+            `You lost your bet of **${bet.toLocaleString()}** Cowoncy.`
+          );
+
+        return interaction.update({ embeds: [loseEmbed], components: buildComponents(true, idx) });
+      }
+
+      // Safe diamond
+      revealedSet.add(idx);
+      revealedCount++;
+
+      if (revealedCount === 7) {
+        // Cleared all 7 safe tiles!
+        isGameOver = true;
+        collector.stop('cleared');
+        const jackpotWin = Math.floor(bet * multipliers[7]);
+        db.addCowoncy(user.id, jackpotWin);
+
+        const clearEmbed = new EmbedBuilder()
+          .setColor('#ffcc00')
+          .setAuthor({ name: `${message.author.username} Cleared the Board! 👑`, iconURL: message.author.displayAvatarURL() })
+          .setDescription(
+            `👑 **PERFECT RUN!** You uncovered all 7 diamonds!\n` +
+            `You won **${multipliers[7]}x** — **+${jackpotWin.toLocaleString()}** Cowoncy!`
+          );
+
+        return interaction.update({ embeds: [clearEmbed], components: buildComponents(true) });
+      }
+
+      const nextMult = multipliers[revealedCount + 1];
+      const curMult = multipliers[revealedCount];
+      const curWin = Math.floor(bet * curMult);
+
+      const updateEmbed = new EmbedBuilder()
+        .setColor('#2ecc71')
+        .setAuthor({ name: `${message.author.username}'s Mines Game`, iconURL: message.author.displayAvatarURL() })
+        .setDescription(
+          `💎 **Current:** **${curMult}x** *(+${curWin.toLocaleString()} Cowoncy)*\n` +
+          `🔥 **Next Tile:** **${nextMult}x**\n\n` +
+          `Keep going or hit **Cash Out** below!`
+        );
+
+      return interaction.update({ embeds: [updateEmbed], components: buildComponents() });
+    });
+  },
+
+  // --- 6. SNAIL GARDEN (OwO Snail Minigame) ---
+  snailgarden: async (message, args, user) => {
+    const snails = [
+      { name: 'Turbo', emoji: '🐌' },
+      { name: 'Shelly', emoji: '🐚' },
+      { name: 'Flash', emoji: '🐌' },
+      { name: 'Speedy', emoji: '🐌' }
+    ];
+
+    const winner = snails[Math.floor(Math.random() * snails.length)];
+    const reward = Math.floor(Math.random() * 800) + 300;
+    db.addCowoncy(user.id, reward);
+
+    const raceMsg = await message.reply(`🏁 | **Snail Garden Race started!**\n` +
+      `[ 🏁 . . . . . . . . . 🐌 Turbo ]\n` +
+      `[ 🏁 . . . . . . . . . 🐚 Shelly ]\n` +
+      `[ 🏁 . . . . . . . . . 🐌 Flash ]\n` +
+      `[ 🏁 . . . . . . . . . 🐌 Speedy ]`
+    );
+
+    setTimeout(async () => {
+      await raceMsg.edit(
+        `🏆 | **${winner.name}** crossed the finish line first! ${winner.emoji}\n` +
+        `You visited the Snail Garden and earned **+${reward.toLocaleString()}** Cowoncy! ${getRandomFace()}`
+      ).catch(() => {});
+    }, 1200);
   },
 
   getCardEmoji,

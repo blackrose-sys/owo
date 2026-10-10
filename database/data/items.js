@@ -30,7 +30,7 @@ const SHOP_ITEMS = [
     emoji: '🗡️',
     price: 8000,
     category: 'crates',
-    description: 'Guaranteed to grant a battle weapon from Rare to Legendary rank.'
+    description: 'Guaranteed to grant a battle weapon from Common to Legendary rank.'
   },
   {
     id: 'gem_luck',
@@ -66,49 +66,133 @@ const SHOP_ITEMS = [
   }
 ];
 
+// Authentic OwO Weapons matching user screenshot and official armory
 const WEAPONS = [
-  // Common
-  { id: 'rusty_dagger', name: 'Rusty Dagger', emoji: '🗡️', tier: 'common', atk: 15, def: 2, crit: 5, price: 500 },
-  { id: 'wooden_staff', name: 'Wooden Staff', emoji: '🦯', tier: 'common', atk: 12, def: 5, crit: 3, price: 500 },
-  { id: 'hunting_slingshot', name: 'Hunting Slingshot', emoji: '🪃', tier: 'common', atk: 14, def: 3, crit: 8, price: 600 },
+  // --- COMMON [C] ---
+  { id: 'conduit_claw', name: 'Conduit Claw', type: 'claw', typeEmoji: '🐾', element: 'biohazard', elementEmoji: '☣️', tier: 'common', atk: 22, def: 8, crit: 10, price: 800 },
+  { id: 'staff_purity', name: 'Decent Staff of Purity', type: 'staff', typeEmoji: '🪄', element: 'lightning', elementEmoji: '⚡', tier: 'common', atk: 20, def: 15, crit: 8, price: 850 },
+  { id: 'rusty_dagger', name: 'Rusty Dagger', type: 'dagger', typeEmoji: '🗡️', element: 'poison', elementEmoji: '🧪', tier: 'common', atk: 18, def: 4, crit: 12, price: 500 },
+  { id: 'wooden_staff', name: 'Wooden Staff', type: 'staff', typeEmoji: '🦯', element: 'water', elementEmoji: '💧', tier: 'common', atk: 15, def: 10, crit: 6, price: 500 },
+  { id: 'hunting_slingshot', name: 'Hunting Slingshot', type: 'bow', typeEmoji: '🪃', element: 'fist', elementEmoji: '👊', tier: 'common', atk: 17, def: 5, crit: 14, price: 600 },
 
-  // Uncommon
-  { id: 'iron_broadsword', name: 'Iron Broadsword', emoji: '⚔️', tier: 'uncommon', atk: 30, def: 10, crit: 8, price: 2000 },
-  { id: 'oak_longbow', name: 'Oak Longbow', emoji: '🏹', tier: 'uncommon', atk: 32, def: 6, crit: 14, price: 2200 },
-  { id: 'apprentice_wand', name: 'Apprentice Wand', emoji: '🪄', tier: 'uncommon', atk: 28, def: 12, crit: 10, price: 2100 },
+  // --- UNCOMMON [U] ---
+  { id: 'foul_fish', name: 'Foul Fish', type: 'fish', typeEmoji: '🐟', element: 'water', elementEmoji: '💧', tier: 'uncommon', atk: 45, def: 18, crit: 15, price: 2400 },
+  { id: 'spirit_staff', name: 'Spirit Staff', type: 'staff', typeEmoji: '🪄', element: 'water', elementEmoji: '💧', tier: 'uncommon', atk: 48, def: 24, crit: 16, price: 2600 },
+  { id: 'iron_broadsword', name: 'Iron Broadsword', type: 'sword', typeEmoji: '⚔️', element: 'fist', elementEmoji: '👊', tier: 'uncommon', atk: 42, def: 20, crit: 14, price: 2200 },
+  { id: 'oak_longbow', name: 'Oak Longbow', type: 'bow', typeEmoji: '🏹', element: 'portal', elementEmoji: '🌀', tier: 'uncommon', atk: 46, def: 14, crit: 22, price: 2500 },
+  { id: 'apprentice_wand', name: 'Apprentice Wand', type: 'scepter', typeEmoji: '🦯', element: 'lightning', elementEmoji: '⚡', tier: 'uncommon', atk: 40, def: 22, crit: 18, price: 2300 },
 
-  // Rare
-  { id: 'silver_rapier', name: 'Silver Rapier', emoji: '🤺', tier: 'rare', atk: 55, def: 18, crit: 20, price: 6500 },
-  { id: 'crystal_blade', name: 'Crystal Blade', emoji: '💎', tier: 'rare', atk: 62, def: 15, crit: 18, price: 7000 },
-  { id: 'battle_axe', name: 'Viking Battleaxe', emoji: '🪓', tier: 'rare', atk: 70, def: 12, crit: 12, price: 6800 },
+  // --- RARE [R] ---
+  { id: 'silver_rapier', name: 'Silver Rapier', type: 'sword', typeEmoji: '🤺', element: 'lightning', elementEmoji: '⚡', tier: 'rare', atk: 75, def: 25, crit: 25, price: 7000 },
+  { id: 'crystal_blade', name: 'Crystal Blade', type: 'sword', typeEmoji: '💎', element: 'ice', elementEmoji: '❄️', tier: 'rare', atk: 82, def: 22, crit: 24, price: 7500 },
+  { id: 'battle_axe', name: 'Viking Battleaxe', type: 'sword', typeEmoji: '🪓', element: 'blood', elementEmoji: '🩸', tier: 'rare', atk: 88, def: 18, crit: 20, price: 7200 },
+  { id: 'ice_scepter', name: 'Glacial Scepter', type: 'scepter', typeEmoji: '🦯', element: 'ice', elementEmoji: '❄️', tier: 'rare', atk: 78, def: 32, crit: 22, price: 7400 },
 
-  // Epic
-  { id: 'shadow_scythe', name: 'Shadow Scythe', emoji: '🌙', tier: 'epic', atk: 110, def: 25, crit: 25, price: 18000 },
-  { id: 'flame_katana', name: 'Flame Katana', emoji: '🔥', tier: 'epic', atk: 118, def: 20, crit: 28, price: 20000 },
-  { id: 'storm_hammer', name: 'Storm Hammer', emoji: '⚡', tier: 'epic', atk: 125, def: 35, crit: 15, price: 22000 },
+  // --- EPIC [E] ---
+  { id: 'vanguards_banner', name: "Vanguard's Banner", type: 'shield', typeEmoji: '🛡️', element: 'toxic', elementEmoji: '🧪', tier: 'epic', atk: 120, def: 160, crit: 22, price: 22000 },
+  { id: 'bleeding_gaze', name: 'Bleeding Gaze', type: 'relic', typeEmoji: '🔮', element: 'blood', elementEmoji: '🩸', tier: 'epic', atk: 145, def: 95, crit: 30, price: 24000 },
+  { id: 'flame_staff', name: 'Flame Staff', type: 'flame', typeEmoji: '🔥', element: 'vampire', elementEmoji: '🧛', tier: 'epic', atk: 138, def: 88, crit: 28, price: 23000 },
+  { id: 'shadow_scythe', name: 'Shadow Scythe', type: 'sword', typeEmoji: '🌙', element: 'blood', elementEmoji: '🩸', tier: 'epic', atk: 150, def: 80, crit: 32, price: 25000 },
+  { id: 'storm_hammer', name: 'Storm Hammer', type: 'sword', typeEmoji: '⚡', element: 'lightning', elementEmoji: '⚡', tier: 'epic', atk: 155, def: 105, crit: 24, price: 26000 },
 
-  // Mythic
-  { id: 'abyssal_trident', name: 'Abyssal Trident', emoji: '🔱', tier: 'mythic', atk: 210, def: 60, crit: 30, price: 50000 },
-  { id: 'celestial_staff', name: 'Celestial Staff', emoji: '✨', tier: 'mythic', atk: 225, def: 65, crit: 32, price: 55000 },
+  // --- LEGENDARY [L] ---
+  { id: 'resurrection_staff', name: 'Resurrection Staff', type: 'staff', typeEmoji: '🪄', element: 'radiation', elementEmoji: '☢️', tier: 'legendary', atk: 220, def: 140, crit: 34, price: 90000 },
+  { id: 'defenders_aegis', name: "Defender's Aegis", type: 'shield', typeEmoji: '🛡️', element: 'biohazard', elementEmoji: '☣️', tier: 'legendary', atk: 130, def: 270, crit: 18, price: 95000 },
+  { id: 'legendary_bow', name: 'Bow', type: 'bow', typeEmoji: '🏹', element: 'portal', elementEmoji: '🌀', tier: 'legendary', atk: 245, def: 90, crit: 44, price: 92000 },
+  { id: 'arcane_scepter', name: 'Arcane Scepter', type: 'scepter', typeEmoji: '🦯', element: 'toxic', elementEmoji: '🧪', tier: 'legendary', atk: 235, def: 110, crit: 36, price: 94000 },
+  { id: 'great_sword', name: 'Great Sword', type: 'sword', typeEmoji: '⚔️', element: 'fist', elementEmoji: '👊', tier: 'legendary', atk: 270, def: 95, crit: 38, price: 96000 },
+  { id: 'vanguards_banner_0', name: "Vanguard's Banner [0]", type: 'shield', typeEmoji: '🛡️', element: 'ice', elementEmoji: '❄️', tier: 'legendary', atk: 150, def: 250, crit: 25, price: 98000 },
+  { id: 'poison_dagger', name: 'Poison Dagger', type: 'dagger', typeEmoji: '🗡️', element: 'poison', elementEmoji: '🧪', tier: 'legendary', atk: 250, def: 85, crit: 48, price: 97000 },
+  { id: 'wounding_crossbow', name: 'Wounding Crossbow', type: 'crossbow', typeEmoji: '🎯', element: 'blood', elementEmoji: '🩸', tier: 'legendary', atk: 265, def: 80, crit: 45, price: 99000 },
 
-  // Legendary
-  { id: 'godslayer_blade', name: 'Godslayer Blade', emoji: '👑', tier: 'legendary', atk: 380, def: 110, crit: 40, price: 150000 },
-  { id: 'void_reaper', name: 'Void Reaper', emoji: '🌌', tier: 'legendary', atk: 420, def: 95, crit: 45, price: 180000 },
+  // --- MYTHIC [M] ---
+  { id: 'abyssal_trident', name: 'Abyssal Trident', type: 'relic', typeEmoji: '🔱', element: 'water', elementEmoji: '💧', tier: 'mythic', atk: 350, def: 160, crit: 42, price: 250000 },
+  { id: 'void_reaper', name: 'Void Reaper', type: 'sword', typeEmoji: '🌌', element: 'portal', elementEmoji: '🌀', tier: 'mythic', atk: 380, def: 140, crit: 50, price: 280000 },
+  { id: 'godslayer_blade', name: 'Godslayer Blade', type: 'sword', typeEmoji: '👑', element: 'radiation', elementEmoji: '☢️', tier: 'mythic', atk: 420, def: 180, crit: 48, price: 320000 }
 ];
 
+// Helper to generate authentic 6-char alphanumeric weapon ID (like FV9XWP)
+function generateWeaponCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// Generate realistic quality percentage e.g. 42.0%, 75.0%, 47.3%
+function generateWeaponQuality(tier = 'common') {
+  let min = 15;
+  let max = 65;
+  if (tier === 'uncommon') { min = 20; max = 72; }
+  else if (tier === 'rare') { min = 30; max = 80; }
+  else if (tier === 'epic') { min = 45; max = 88; }
+  else if (tier === 'legendary') { min = 40; max = 92; }
+  else if (tier === 'mythic') { min = 60; max = 99; }
+
+  const val = Math.random() * (max - min) + min;
+  return parseFloat(val.toFixed(1));
+}
+
+// Visual rarity brackets matching OwO: [L], [E], [R], [U], [C]
+function getRarityBracket(tier = 'common') {
+  switch (tier.toLowerCase()) {
+    case 'legendary':
+      return '`[L]`';
+    case 'epic':
+      return '`[E]`';
+    case 'rare':
+      return '`[R]`';
+    case 'uncommon':
+      return '`[U]`';
+    case 'mythic':
+      return '`[M]`';
+    case 'fabled':
+      return '`[F]`';
+    case 'common':
+    default:
+      return '`[C]`';
+  }
+}
+
 function getItemById(id) {
+  if (!id) return null;
   const clean = id.toLowerCase().trim();
   return SHOP_ITEMS.find(i => i.id === clean || i.name.toLowerCase() === clean);
 }
 
 function getWeaponById(id) {
+  if (!id) return null;
   const clean = id.toLowerCase().trim();
   return WEAPONS.find(w => w.id === clean || w.name.toLowerCase() === clean);
+}
+
+// Pick a random weapon weighted by tier
+function getRandomWeapon() {
+  const rand = Math.random() * 100;
+  let chosenTier = 'common';
+  if (rand < 1.0) chosenTier = 'mythic';
+  else if (rand < 6.0) chosenTier = 'legendary';
+  else if (rand < 18.0) chosenTier = 'epic';
+  else if (rand < 40.0) chosenTier = 'rare';
+  else if (rand < 70.0) chosenTier = 'uncommon';
+  else chosenTier = 'common';
+
+  const pool = WEAPONS.filter(w => w.tier === chosenTier);
+  if (pool.length > 0) {
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  return WEAPONS[Math.floor(Math.random() * WEAPONS.length)];
 }
 
 module.exports = {
   SHOP_ITEMS,
   WEAPONS,
   getItemById,
-  getWeaponById
+  getWeaponById,
+  getRandomWeapon,
+  generateWeaponCode,
+  generateWeaponQuality,
+  getRarityBracket
 };
