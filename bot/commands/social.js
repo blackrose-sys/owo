@@ -167,11 +167,28 @@ module.exports = {
       }
     }
 
-    const authorAvatar = typeof message.author.displayAvatarURL === 'function'
-      ? message.author.displayAvatarURL({ dynamic: true })
+    // Use the bot's avatar for the embed icon (matching original OwO style)
+    const botAvatar = typeof message.client.user?.displayAvatarURL === 'function'
+      ? message.client.user.displayAvatarURL({ dynamic: true })
       : '';
 
     const gif = getActionGif(actionName);
+
+    // Action emojis for each type (matching the original OwO cute animal prefix style)
+    const ACTION_EMOJIS = {
+      bite: '🦊', punch: '👊', sex: '💕', dogstyle: '💕', doggystyle: '💕',
+      hug: '🐻', kiss: '💋', pat: '🐾', pats: '🐾', slap: '✋',
+      cuddle: '🧸', poke: '👉', lick: '👅', nom: '🍪', stare: '👀',
+      highfive: '🙌', wave: '👋', greet: '🌟', handholding: '💑', hold: '💑',
+      tickle: '🤗', kill: '💀', boop: '👃', snuggle: '🐻', bully: '😈',
+      dambi: '💥', lewd: '🙈',
+      blush: '😳', cry: '😢', dance: '💃', smile: '😊', pout: '😤',
+      shrug: '🤷', sleepy: '😴', smug: '😏', thumbsup: '👍', thumbs: '👍',
+      wag: '🐕', thinking: '🤔', thonking: '🤔', triggered: '😡',
+      teehee: '🤭', deredere: '💕', scoff: '😒', happy: '😄', grin: '😁'
+    };
+
+    const emoji = ACTION_EMOJIS[actionName] || '✨';
     const embed = new EmbedBuilder().setColor('#00a8fc');
     if (gif) embed.setImage(gif);
 
@@ -206,13 +223,13 @@ module.exports = {
         lewd: `${message.author.username} thinks that is WAY TOO LEWD! (*/ω＼*)`
       };
       embed.setAuthor({
-        name: soloPhrases[actionName] || `${message.author.username} is ${actionName}ing!`,
-        iconURL: authorAvatar
+        name: `${emoji} ${soloPhrases[actionName] || `${message.author.username} is ${actionName}ing!`}`,
+        iconURL: botAvatar
       });
       return message.reply({ embeds: [embed] });
     }
 
-    // Inter-personal target actions (matching screenshot: "skat gives Pix a bite! Yumm~")
+    // Inter-personal target actions (matching screenshot: "🐻 kamotedelight gives a high-five to pixuna605!")
     const tName = target ? target.username : 'the air';
     const actionAuthorPhrases = {
       bite: `${message.author.username} gives ${tName} a bite! Yumm~`,
@@ -245,8 +262,8 @@ module.exports = {
     };
 
     embed.setAuthor({
-      name: actionAuthorPhrases[actionName] || `${message.author.username} ${actionName}s ${tName}!`,
-      iconURL: authorAvatar
+      name: `${emoji} ${actionAuthorPhrases[actionName] || `${message.author.username} ${actionName}s ${tName}!`}`,
+      iconURL: botAvatar
     });
 
     return message.reply({ embeds: [embed] });

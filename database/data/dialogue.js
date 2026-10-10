@@ -27,11 +27,13 @@ function owoify(text) {
   return result + suffix;
 }
 
+// All GIFs use Giphy CDN which reliably serves worldwide
 const ACTION_GIFS = {
   hug: [
     'https://media.giphy.com/media/u9BxQbM5bxvwA/giphy.gif',
     'https://media.giphy.com/media/l2QDM9Jnim1YVsfXa/giphy.gif',
-    'https://media.giphy.com/media/od5H3PmEG5EVq/giphy.gif'
+    'https://media.giphy.com/media/od5H3PmEG5EVq/giphy.gif',
+    'https://media.giphy.com/media/3bqtLMeiO2jRm/giphy.gif'
   ],
   kiss: [
     'https://media.giphy.com/media/G3va31oEEnIkM/giphy.gif',
@@ -41,7 +43,8 @@ const ACTION_GIFS = {
   pat: [
     'https://media.giphy.com/media/ye7OTDaJ5UMddUj5yz/giphy.gif',
     'https://media.giphy.com/media/L2z7dnOduqEow/giphy.gif',
-    'https://media.giphy.com/media/109ltuoSQW21OW/giphy.gif'
+    'https://media.giphy.com/media/109ltuoSQW21OW/giphy.gif',
+    'https://media.giphy.com/media/4HP0ddZnNVvKU/giphy.gif'
   ],
   pats: [
     'https://media.giphy.com/media/ye7OTDaJ5UMddUj5yz/giphy.gif',
@@ -58,7 +61,8 @@ const ACTION_GIFS = {
   ],
   cuddle: [
     'https://media.giphy.com/media/l41lI4bYmcsPJX9Go/giphy.gif',
-    'https://media.giphy.com/media/xT39CXg70nNS0MFNLy/giphy.gif'
+    'https://media.giphy.com/media/xT39CXg70nNS0MFNLy/giphy.gif',
+    'https://media.giphy.com/media/3bqtLMeiO2jRm/giphy.gif'
   ],
   poke: [
     'https://media.giphy.com/media/Lq0h93752f6J9tijrh/giphy.gif',
@@ -71,8 +75,8 @@ const ACTION_GIFS = {
     'https://media.giphy.com/media/AlsIdbROVJ2Lu/giphy.gif'
   ],
   dambi: [
-    'https://media.tenor.com/X3lqFO1RFZoAAAAC/dambi.gif',
-    'https://media.tenor.com/X3lqFO1RFZoAAAAM/dambi.gif'
+    'https://media.giphy.com/media/arbHBDAUw95yU/giphy.gif',
+    'https://media.giphy.com/media/AlsIdbROVJ2Lu/giphy.gif'
   ],
   sex: [
     'https://media.giphy.com/media/OpfkuToK5NLig/giphy.gif',
@@ -94,20 +98,21 @@ const ACTION_GIFS = {
     'https://media.giphy.com/media/13eeJ2vmb29psI/giphy.gif'
   ],
   blush: [
-    'https://media.giphy.com/media/OpfkuToK5NLig/giphy.gif',
-    'https://media.giphy.com/media/13eeJ2vmb29psI/giphy.gif'
+    'https://media.giphy.com/media/kaq6GnxDlJaBq/giphy.gif',
+    'https://media.giphy.com/media/bQC7ZMBl0oI36/giphy.gif'
   ],
   cry: [
     'https://media.giphy.com/media/XpgOZHuDfI09O/giphy.gif',
-    'https://media.giphy.com/media/ROF8OQvDmxytW/giphy.gif'
+    'https://media.giphy.com/media/ROF8OQvDmxytW/giphy.gif',
+    'https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif'
   ],
   dance: [
     'https://media.giphy.com/media/13CoXDiaCcCoyk/giphy.gif',
-    'https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif'
+    'https://media.giphy.com/media/j3iGKfXRKlBBe/giphy.gif'
   ],
   smile: [
     'https://media.giphy.com/media/13CoXDiaCcCoyk/giphy.gif',
-    'https://media.giphy.com/media/OpfkuToK5NLig/giphy.gif'
+    'https://media.giphy.com/media/xUPGcMzfkOPQB3IQbK/giphy.gif'
   ],
   lick: [
     'https://media.giphy.com/media/129NVCr1UfsGTS/giphy.gif',
@@ -123,7 +128,8 @@ const ACTION_GIFS = {
   ],
   highfive: [
     'https://media.giphy.com/media/109ltuoSQW21OW/giphy.gif',
-    'https://media.giphy.com/media/u9BxQbM5bxvwA/giphy.gif'
+    'https://media.giphy.com/media/u9BxQbM5bxvwA/giphy.gif',
+    'https://media.giphy.com/media/3oEjHV0z8S7WM4MwnK/giphy.gif'
   ],
   wave: [
     'https://media.giphy.com/media/13CoXDiaCcCoyk/giphy.gif',
@@ -163,7 +169,7 @@ const ACTION_GIFS = {
   ],
   pout: [
     'https://media.giphy.com/media/XpgOZHuDfI09O/giphy.gif',
-    'https://media.giphy.com/media/OpfkuToK5NLig/giphy.gif'
+    'https://media.giphy.com/media/bQC7ZMBl0oI36/giphy.gif'
   ],
   shrug: [
     'https://media.giphy.com/media/3o7aCSX4nN1W2Nss80/giphy.gif'
@@ -172,7 +178,7 @@ const ACTION_GIFS = {
     'https://media.giphy.com/media/XpgOZHuDfI09O/giphy.gif'
   ],
   smug: [
-    'https://media.giphy.com/media/OpfkuToK5NLig/giphy.gif'
+    'https://media.giphy.com/media/xUPGcMzfkOPQB3IQbK/giphy.gif'
   ],
   thumbsup: [
     'https://media.giphy.com/media/109ltuoSQW21OW/giphy.gif'
@@ -206,7 +212,7 @@ const ACTION_GIFS = {
     'https://media.giphy.com/media/13CoXDiaCcCoyk/giphy.gif'
   ],
   grin: [
-    'https://media.giphy.com/media/OpfkuToK5NLig/giphy.gif'
+    'https://media.giphy.com/media/xUPGcMzfkOPQB3IQbK/giphy.gif'
   ]
 };
 

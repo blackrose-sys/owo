@@ -1,7 +1,8 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, AttachmentBuilder } = require('discord.js');
 const db = require('../../database/db');
 const { getRandomFace } = require('../../database/data/dialogue');
 const { checkCooldown } = require('../handlers/cooldownHandler');
+const { renderHlCards, renderBjHands } = require('../utils/cardRenderer');
 
 // Blackjack card utilities
 const SUITS = ['♠', '♥', '♦', '♣'];
@@ -287,7 +288,7 @@ module.exports = {
     }, 450);
   },
 
-  // --- 3. BLACKJACK (Exact authentic OwO Embed & Reaction System) ---
+  // --- 3. BLACKJACK (Canvas-rendered big cards matching original OwO) ---
   blackjack: async (message, args, user) => {
     const cd = checkCooldown(user.id, 'bj', 3);
     if (cd) return message.reply(`⏰ Please wait **${cd}s** before starting another blackjack game!`);
@@ -311,69 +312,55 @@ module.exports = {
     const authorName = message.author.username;
     const authorAvatar = (typeof message.author.displayAvatarURL === 'function' && message.author.displayAvatarURL()) || undefined;
 
+    function makeBjEmbed(dLabel, pLabel, statusText, color) {
+      return new EmbedBuilder()
+        .setColor(color)
+        .setAuthor({
+          name: `${authorName}, you bet ${bet.toLocaleString()} to play blackjack`,
+          iconURL: authorAvatar
+        })
+        .setDescription(`**${dLabel}** vs **${pLabel}**\n\n${statusText}`)
+        .setImage('attachment://cards.png');
+    }
+
+    function makeBjAttachment(hideDealer = false) {
+      const dVal = hideDealer ? `${getDealerUpValue(dealerHand[0])}+?` : calculateHandValue(dealerHand);
+      const pVal = calculateHandValue(playerHand);
+      const buf = renderBjHands({
+        dealerHand,
+        playerHand,
+        hideDealer,
+        dealerLabel: `Dealer [${dVal}]`,
+        playerLabel: `${authorName} [${pVal}]`
+      });
+      return new AttachmentBuilder(buf, { name: 'cards.png' });
+    }
+
     // Natural 21 Blackjack
     if (playerVal === 21) {
       if (dealerVal === 21) {
         db.addCowoncy(user.id, bet);
-        const tieEmbed = new EmbedBuilder()
-          .setColor(0x4f545c)
-          .setAuthor({
-            name: `${authorName}, you bet ${bet.toLocaleString()} to play blackjack`,
-            iconURL: authorAvatar
-          })
-          .addFields(
-            { name: `Dealer \`[21]\``, value: dealerHand.map(c => getCardEmoji(c, message.client)).join(' '), inline: true },
-            { name: `${authorName} \`[21]\``, value: playerHand.map(c => getCardEmoji(c, message.client)).join(' '), inline: true },
-            { name: '\u200b', value: '🎲 ~ You tied!', inline: false }
-          );
-        return message.reply({ embeds: [tieEmbed] });
+        const att = makeBjAttachment(false);
+        const embed = makeBjEmbed('Dealer [21]', `${authorName} [21]`, '🎲 ~ You tied!', 0x4f545c);
+        return message.reply({ embeds: [embed], files: [att] });
       } else {
         const winAmount = bet * 2;
         db.addCowoncy(user.id, winAmount);
-        const winEmbed = new EmbedBuilder()
-          .setColor(0x57f287)
-          .setAuthor({
-            name: `${authorName}, you bet ${bet.toLocaleString()} to play blackjack`,
-            iconURL: authorAvatar
-          })
-          .addFields(
-            { name: `Dealer \`[${dealerVal}]\``, value: dealerHand.map(c => getCardEmoji(c, message.client)).join(' '), inline: true },
-            { name: `${authorName} \`[21]\``, value: playerHand.map(c => getCardEmoji(c, message.client)).join(' '), inline: true },
-            { name: '\u200b', value: `🎲 ~ You won ${winAmount.toLocaleString()} cowoncy!`, inline: false }
-          );
-        return message.reply({ embeds: [winEmbed] });
+        const att = makeBjAttachment(false);
+        const embed = makeBjEmbed(`Dealer [${dealerVal}]`, `${authorName} [21]`, `🎲 ~ You won ${winAmount.toLocaleString()} cowoncy!`, 0x57f287);
+        return message.reply({ embeds: [embed], files: [att] });
       }
     }
 
-    const dealerUpVal = getDealerUpValue(dealerHand[0]);
-    const dealerUpEmoji = getCardEmoji(dealerHand[0], message.client);
-    const cardBackEmoji = getCardBackEmoji(message.client);
+    const att = makeBjAttachment(true);
+    const embed = makeBjEmbed(
+      `Dealer [${getDealerUpValue(dealerHand[0])}+?]`,
+      `${authorName} [${playerVal}]`,
+      '🎲 ~ game in progress\n👊 Hit | 🛑 Stand',
+      0x3498db
+    );
 
-    const progressEmbed = new EmbedBuilder()
-      .setColor(0x3498db) // Blue in-progress matching OwO
-      .setAuthor({
-        name: `${authorName}, you bet ${bet.toLocaleString()} to play blackjack`,
-        iconURL: authorAvatar
-      })
-      .addFields(
-        {
-          name: `Dealer \`[${dealerUpVal}+?]\``,
-          value: `${dealerUpEmoji} ${cardBackEmoji}`,
-          inline: true
-        },
-        {
-          name: `${authorName} \`[${playerVal}]\``,
-          value: playerHand.map(c => getCardEmoji(c, message.client)).join(' '),
-          inline: true
-        },
-        {
-          name: '\u200b',
-          value: '🎲 ~ game in progress',
-          inline: false
-        }
-      );
-
-    const replyMsg = await message.reply({ embeds: [progressEmbed] });
+    const replyMsg = await message.reply({ embeds: [embed], files: [att] });
     await replyMsg.react('👊').catch(() => {});
     await replyMsg.react('🛑').catch(() => {});
 
@@ -407,12 +394,12 @@ module.exports = {
         const winAmount = bet * 2;
         db.addCowoncy(user.id, winAmount);
         embedColor = 0x57f287;
-        statusText = `🎲 ~ You won ${winAmount.toLocaleString()} cowoncy!`;
+        statusText = `🎲 ~ Dealer busted! You won **${winAmount.toLocaleString()}** cowoncy!`;
       } else if (finalPlayerVal > finalDealerVal) {
         const winAmount = bet * 2;
         db.addCowoncy(user.id, winAmount);
         embedColor = 0x57f287;
-        statusText = `🎲 ~ You won ${winAmount.toLocaleString()} cowoncy!`;
+        statusText = `🎲 ~ You won **${winAmount.toLocaleString()}** cowoncy!`;
       } else if (finalPlayerVal === finalDealerVal) {
         db.addCowoncy(user.id, bet);
         embedColor = 0x4f545c;
@@ -422,31 +409,15 @@ module.exports = {
         statusText = '🎲 ~ You lost!';
       }
 
-      const finalEmbed = new EmbedBuilder()
-        .setColor(embedColor)
-        .setAuthor({
-          name: `${authorName}, you bet ${bet.toLocaleString()} to play blackjack`,
-          iconURL: authorAvatar
-        })
-        .addFields(
-          {
-            name: `Dealer \`[${finalDealerVal}]\``,
-            value: dealerHand.map(c => getCardEmoji(c, message.client)).join(' '),
-            inline: true
-          },
-          {
-            name: `${authorName} \`[${finalPlayerVal}]\``,
-            value: playerHand.map(c => getCardEmoji(c, message.client)).join(' '),
-            inline: true
-          },
-          {
-            name: '\u200b',
-            value: statusText,
-            inline: false
-          }
-        );
+      const finalAtt = makeBjAttachment(false);
+      const finalEmbed = makeBjEmbed(
+        `Dealer [${finalDealerVal}]`,
+        `${authorName} [${finalPlayerVal}]`,
+        statusText,
+        embedColor
+      );
 
-      await replyMsg.edit({ embeds: [finalEmbed] }).catch(() => {});
+      await replyMsg.edit({ embeds: [finalEmbed], files: [finalAtt] }).catch(() => {});
     }
 
     collector.on('collect', async (reaction, userObj) => {
@@ -466,60 +437,28 @@ module.exports = {
           collector.stop('bust');
           const finalDealerVal = calculateHandValue(dealerHand);
 
-          const bustEmbed = new EmbedBuilder()
-            .setColor(0xed4245)
-            .setAuthor({
-              name: `${authorName}, you bet ${bet.toLocaleString()} to play blackjack`,
-              iconURL: authorAvatar
-            })
-            .addFields(
-              {
-                name: `Dealer \`[${finalDealerVal}]\``,
-                value: dealerHand.map(c => getCardEmoji(c, message.client)).join(' '),
-                inline: true
-              },
-              {
-                name: `${authorName} \`[${playerVal}]\``,
-                value: playerHand.map(c => getCardEmoji(c, message.client)).join(' '),
-                inline: true
-              },
-              {
-                name: '\u200b',
-                value: '🎲 ~ You lost!',
-                inline: false
-              }
-            );
+          const bustAtt = makeBjAttachment(false);
+          const bustEmbed = makeBjEmbed(
+            `Dealer [${finalDealerVal}]`,
+            `${authorName} [${playerVal}]`,
+            '🎲 ~ Busted! You lost!',
+            0xed4245
+          );
 
-          await replyMsg.edit({ embeds: [bustEmbed] }).catch(() => {});
+          await replyMsg.edit({ embeds: [bustEmbed], files: [bustAtt] }).catch(() => {});
         } else if (playerVal === 21) {
           collector.stop('stand');
           await finishGame();
         } else {
-          const updatedEmbed = new EmbedBuilder()
-            .setColor(0x3498db)
-            .setAuthor({
-              name: `${authorName}, you bet ${bet.toLocaleString()} to play blackjack`,
-              iconURL: authorAvatar
-            })
-            .addFields(
-              {
-                name: `Dealer \`[${dealerUpVal}+?]\``,
-                value: `${dealerUpEmoji} ${cardBackEmoji}`,
-                inline: true
-              },
-              {
-                name: `${authorName} \`[${playerVal}]\``,
-                value: playerHand.map(c => getCardEmoji(c, message.client)).join(' '),
-                inline: true
-              },
-              {
-                name: '\u200b',
-                value: '🎲 ~ game in progress',
-                inline: false
-              }
-            );
+          const updAtt = makeBjAttachment(true);
+          const updEmbed = makeBjEmbed(
+            `Dealer [${getDealerUpValue(dealerHand[0])}+?]`,
+            `${authorName} [${playerVal}]`,
+            '🎲 ~ game in progress\n👊 Hit | 🛑 Stand',
+            0x3498db
+          );
 
-          await replyMsg.edit({ embeds: [updatedEmbed] }).catch(() => {});
+          await replyMsg.edit({ embeds: [updEmbed], files: [updAtt] }).catch(() => {});
         }
       } else if (reaction.emoji.name === '🛑') {
         collector.stop('stand');
@@ -595,7 +534,7 @@ module.exports = {
       const row3 = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('hl_cashout')
-          .setLabel(`Cash Out: ${pot.toLocaleString()}`)
+          .setLabel(`Cash Out`)
           .setStyle(ButtonStyle.Success)
       );
 
@@ -604,28 +543,34 @@ module.exports = {
 
     function buildHlEmbed(statusTitle, isDone = false) {
       const currentCard = cardHistory[cardHistory.length - 1];
-      const historyStr = cardHistory.map(c => getCardEmoji({ value: HL_NAMES[c.value], suit: c.suit }, message.client)).join(' ▶ ');
       const multStr = (currentCashOut / bet).toFixed(2);
-      const currentCardEmoji = getCardEmoji({ value: HL_NAMES[currentCard.value], suit: currentCard.suit }, message.client);
 
       const embed = new EmbedBuilder()
         .setColor(isDone ? (currentCashOut > 0 ? '#4caf50' : '#e53935') : '#8a7ff8')
-        .setTitle(statusTitle)
         .setDescription(
+          `🎰 **${statusTitle}**\n` +
+          (isDone && currentCashOut > 0 ? `**guessed correctly!!**\n\n` : isDone ? `**guessed incorrectly!!**\n\n` : '\n') +
           `**Bet:** \`${bet.toLocaleString()}\`  **Streak:** \`${streak}\`  **Cash Out:** \`${currentCashOut.toLocaleString()}\` \`(${multStr}x)\`\n\n` +
-          `${historyStr}\n\n` +
           (isDone 
             ? (currentCashOut > 0 ? `You cashed out with **${currentCashOut.toLocaleString()}** cowoncy!` : `You lost your bet of **${bet.toLocaleString()}** cowoncy.`)
-            : `Current Card: ${currentCardEmoji}`)
-        );
+            : `You guessed **?**. Current Card: **${currentCard.value}**`)
+        )
+        .setImage('attachment://hlcards.png');
       return embed;
     }
 
+    function buildHlAttachment() {
+      const cards = cardHistory.map(c => ({ value: HL_NAMES[c.value], suit: c.suit }));
+      const buf = renderHlCards(cards);
+      return new AttachmentBuilder(buf, { name: 'hlcards.png' });
+    }
+
     const currentCard = cardHistory[0];
-    const initialEmbed = buildHlEmbed(`🔷 @${message.author.username} playing!`);
+    const initialEmbed = buildHlEmbed(`@${message.author.username} playing!`);
+    const initialAtt = buildHlAttachment();
     const components = buildHlComponents(currentCard.value, currentCashOut);
 
-    const replyMsg = await message.reply({ embeds: [initialEmbed], components });
+    const replyMsg = await message.reply({ embeds: [initialEmbed], files: [initialAtt], components });
 
     if (typeof replyMsg?.createMessageComponentCollector !== 'function') return;
 
@@ -642,8 +587,9 @@ module.exports = {
       if (interaction.customId === 'hl_cashout') {
         collector.stop('cashout');
         db.addCowoncy(user.id, currentCashOut);
-        const finalEmbed = buildHlEmbed(`🔷 @${message.author.username} cashed out!`, true);
-        return interaction.update({ embeds: [finalEmbed], components: [] });
+        const finalEmbed = buildHlEmbed(`@${message.author.username} cashed out!`, true);
+        const finalAtt = buildHlAttachment();
+        return interaction.update({ embeds: [finalEmbed], files: [finalAtt], components: [] });
       }
 
       // Draw next card
@@ -673,15 +619,17 @@ module.exports = {
       if (isCorrect) {
         streak += 1;
         currentCashOut += wonBonus;
-        const newEmbed = buildHlEmbed(`🔷 @${message.author.username} playing!`);
+        const newEmbed = buildHlEmbed(`@${message.author.username} playing!`);
+        const newAtt = buildHlAttachment();
         const newComponents = buildHlComponents(nextCard.value, currentCashOut);
-        return interaction.update({ embeds: [newEmbed], components: newComponents });
+        return interaction.update({ embeds: [newEmbed], files: [newAtt], components: newComponents });
       } else {
         // Lost!
         collector.stop('lost');
         currentCashOut = 0;
-        const lostEmbed = buildHlEmbed(`💀 @${message.author.username} lost!`, true);
-        return interaction.update({ embeds: [lostEmbed], components: [] });
+        const lostEmbed = buildHlEmbed(`@${message.author.username} lost!`, true);
+        const lostAtt = buildHlAttachment();
+        return interaction.update({ embeds: [lostEmbed], files: [lostAtt], components: [] });
       }
     });
 
