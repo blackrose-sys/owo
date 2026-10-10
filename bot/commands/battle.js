@@ -105,6 +105,7 @@ module.exports = {
             const lvl = member.level || 1;
             const levelMultiplier = 1 + (lvl - 1) * 0.15;
             const synergy = checkBuildSynergy(animal, weaponData);
+            const build = getAnimalBuild(animal);
             
             const weaponBonusAtk = weaponData ? (weaponData.atk + (slotWeapon.level - 1) * 5) : 0;
             const weaponBonusDef = weaponData ? (weaponData.def + (slotWeapon.level - 1) * 3) : 0;
@@ -113,13 +114,18 @@ module.exports = {
             const atk = Math.floor(animal.atk * levelMultiplier * 10) + weaponBonusAtk + (synergy.hasSynergy ? synergy.bonusAtk : 0);
             const def = Math.floor(animal.def * levelMultiplier * 8) + weaponBonusDef + (synergy.hasSynergy ? synergy.bonusDef : 0);
             const spd = Math.floor((animal.spd || 15) * levelMultiplier * 8);
+            const mp = Math.floor((animal.spd || 15) * levelMultiplier * 30);
             const crit = Math.min(75, 16 + (synergy.hasSynergy ? synergy.bonusCrit : 0));
+            const mag = Math.min(75, 16 + (synergy.hasSynergy && build.id === 'mage' ? 25 : 0));
             
             pets.push({
               name: animal.name, emoji: animal.emoji, lvl, hp, maxHp: hp,
-              atk, def, spd, crit,
+              mp, maxMp: mp,
+              atk, def, spd, crit, mag,
               weaponIcon: weaponData ? (weaponData.typeEmoji || '🛡️') : '🛡️',
-              synergyActive: synergy.hasSynergy
+              buildEmoji: build.emoji || '⚔️',
+              synergyActive: synergy.hasSynergy,
+              quality: slotWeapon ? `${slotWeapon.quality || 50}%` : ''
             });
           }
         }
@@ -136,127 +142,271 @@ module.exports = {
         return message.reply(`❌ **${pvpTarget.username}** has no animals for battle! They need to hunt first!`);
       }
       
-      // ---- Simulate PvP Battle ----
-      const battleLog = [];
-      let p1TotalHp = p1Team.reduce((a, p) => a + p.hp, 0);
-      let p2TotalHp = p2Team.reduce((a, p) => a + p.hp, 0);
-      const p1MaxHp = p1TotalHp;
-      const p2MaxHp = p2TotalHp;
+      // Get win records
+      const p1Wins = user.battles_won || 0;
+      const p2Wins = targetUser.battles_won || 0;
+      const p1Level = user.level || 1;
+      const p2Level = targetUser.level || 1;
       
-      let turnCount = 0;
-      const maxTurns = 25;
-      
-      while (p1TotalHp > 0 && p2TotalHp > 0 && turnCount < maxTurns) {
-        turnCount++;
-        
-        // P1 attacks P2
-        const p1Attacker = p1Team[turnCount % p1Team.length];
-        const p2Defender = p2Team[turnCount % p2Team.length];
-        if (p1Attacker && p2Defender) {
-          const isCrit = Math.random() * 100 < p1Attacker.crit;
-          const critMult = isCrit ? 1.8 : 1.0;
-          const dodged = Math.random() * 100 < (p2Defender.spd / 10);
-          if (!dodged) {
-            let dmg = Math.max(1, Math.floor((p1Attacker.atk * critMult) - (p2Defender.def * 0.4)));
-            dmg += Math.floor(Math.random() * 15);
-            p2TotalHp = Math.max(0, p2TotalHp - dmg);
-            if (isCrit) {
-              battleLog.push(`⚡ ${p1Attacker.emoji} **${p1Attacker.name}** lands a **CRITICAL** strike on ${p2Defender.emoji} ${p2Defender.name} for **${dmg}** dmg!`);
-            } else {
-              battleLog.push(`⚔️ ${p1Attacker.emoji} ${p1Attacker.name} hits ${p2Defender.emoji} ${p2Defender.name} for **${dmg}** dmg`);
-            }
-          } else {
-            battleLog.push(`💨 ${p2Defender.emoji} ${p2Defender.name} dodges ${p1Attacker.emoji} ${p1Attacker.name}'s attack!`);
-          }
-        }
-        
-        if (p2TotalHp <= 0) break;
-        
-        // P2 attacks P1
-        const p2Attacker = p2Team[turnCount % p2Team.length];
-        const p1Defender = p1Team[turnCount % p1Team.length];
-        if (p2Attacker && p1Defender) {
-          const isCrit = Math.random() * 100 < p2Attacker.crit;
-          const critMult = isCrit ? 1.8 : 1.0;
-          const dodged = Math.random() * 100 < (p1Defender.spd / 10);
-          if (!dodged) {
-            let dmg = Math.max(1, Math.floor((p2Attacker.atk * critMult) - (p1Defender.def * 0.4)));
-            dmg += Math.floor(Math.random() * 15);
-            p1TotalHp = Math.max(0, p1TotalHp - dmg);
-            if (isCrit) {
-              battleLog.push(`⚡ ${p2Attacker.emoji} **${p2Attacker.name}** lands a **CRITICAL** strike on ${p1Defender.emoji} ${p1Defender.name} for **${dmg}** dmg!`);
-            } else {
-              battleLog.push(`⚔️ ${p2Attacker.emoji} ${p2Attacker.name} hits ${p1Defender.emoji} ${p1Defender.name} for **${dmg}** dmg`);
-            }
-          } else {
-            battleLog.push(`💨 ${p1Defender.emoji} ${p1Defender.name} dodges ${p2Attacker.emoji} ${p2Attacker.name}'s attack!`);
-          }
-        }
-      }
-      
-      // Determine winner
-      const p1Won = p1TotalHp > p2TotalHp;
-      const winnerName = p1Won ? message.author.username : pvpTarget.username;
-      const loserName = p1Won ? pvpTarget.username : message.author.username;
-      const winnerId = p1Won ? user.id : pvpTarget.id;
-      const loserId = p1Won ? pvpTarget.id : user.id;
-      
-      // Rewards
-      const winCowoncy = 800 + Math.floor(Math.random() * 400);
-      const winXp = 300;
-      const loseCowoncy = 150;
-      db.addCowoncy(winnerId, winCowoncy);
-      db.addCowoncy(loserId, loseCowoncy);
-      
-      // Build team display strings
+      // Build team display like original OwO
       const p1TeamName = ((user.active_team || 1) === 2 ? user.team_name_2 : user.team_name) || 'Team';
       const p2TeamName = ((targetUser.active_team || 1) === 2 ? targetUser.team_name_2 : targetUser.team_name) || 'Team';
       
-      const p1Display = p1Team.map(p => `L.${p.lvl} ${p.emoji} **${p.name}** ${p.weaponIcon}${p.synergyActive ? '⭐' : ''}`).join('\n');
-      const p2Display = p2Team.map(p => `L.${p.lvl} ${p.emoji} **${p.name}** ${p.weaponIcon}${p.synergyActive ? '⭐' : ''}`).join('\n');
+      // Format team lines like original: "L.31 🐺 - ⚔️ 🏹 71%"
+      const formatTeamLine = (pet) => {
+        const qualStr = pet.quality ? ` ${pet.quality}` : '';
+        return `L.${pet.lvl} ${pet.emoji} ${pet.buildEmoji} ${pet.weaponIcon}${qualStr}`;
+      };
       
-      // HP bars
-      const p1HpPct = Math.max(0, Math.floor((p1TotalHp / p1MaxHp) * 10));
-      const p2HpPct = Math.max(0, Math.floor((p2TotalHp / p2MaxHp) * 10));
-      const p1HpBar = '`[' + '▓'.repeat(p1HpPct) + '░'.repeat(10 - p1HpPct) + ']`';
-      const p2HpBar = '`[' + '▓'.repeat(p2HpPct) + '░'.repeat(10 - p2HpPct) + ']`';
+      const p1Lines = p1Team.map(formatTeamLine).join('\n');
+      const p2Lines = p2Team.map(formatTeamLine).join('\n');
       
-      // Show last 5 battle log entries
-      const logDisplay = battleLog.slice(-5).join('\n');
-      
-      const resultEmoji = p1Won ? '🏆' : '💀';
-      const embed = new EmbedBuilder()
-        .setColor(p1Won ? '#43b581' : '#f04747')
+      // ===== CHALLENGE EMBED (like original OwO) =====
+      const challengeEmbed = new EmbedBuilder()
+        .setColor('#2b2d31')
         .setAuthor({
-          name: `⚔️ PvP Battle: ${message.author.username} vs ${pvpTarget.username}`,
-          iconURL: message.author.displayAvatarURL()
+          name: `@${pvpTarget.username}`,
+          iconURL: typeof pvpTarget.displayAvatarURL === 'function' ? pvpTarget.displayAvatarURL() : ''
         })
-        .addFields(
-          {
-            name: `📋 ${message.author.username}'s ${p1TeamName}`,
-            value: `${p1Display}\n${p1HpBar} \`${Math.max(0, p1TotalHp).toLocaleString()} HP\``,
-            inline: true
-          },
-          {
-            name: `📋 ${pvpTarget.username}'s ${p2TeamName}`,
-            value: `${p2Display}\n${p2HpBar} \`${Math.max(0, p2TotalHp).toLocaleString()} HP\``,
-            inline: true
-          },
-          {
-            name: `📜 Battle Log (${turnCount} turns)`,
-            value: logDisplay || '*No attacks landed*',
-            inline: false
-          }
-        )
         .setDescription(
-          `${resultEmoji} **${winnerName}** wins the PvP battle in **${turnCount}** turns!\n\n` +
-          `🏆 **${winnerName}** earned **+${winCowoncy.toLocaleString()} Cowoncy** & **+${winXp} XP**\n` +
-          `🤝 **${loserName}** received **+${loseCowoncy} Cowoncy** (consolation)`
-        )
-        .setThumbnail(typeof pvpTarget.displayAvatarURL === 'function' ? pvpTarget.displayAvatarURL() : '')
-        .setFooter({ text: `Use 'wb @user' to challenge anyone! | Build your team with 'wteam'` });
-
-      return message.reply({ embeds: [embed] });
+          `🎯 **${message.author.username}** challenges you to a duel!\n\n` +
+          `Flags: \`LVL.${Math.max(p1Level, p2Level)}\`\n` +
+          `\`owo ab\` to accept the battle!\n` +
+          `\`owo db\` to decline the battle!\n\n` +
+          `**${p1TeamName}** 🐻 | ${p1Wins} wins` +
+          `${' '.repeat(Math.max(1, 14 - p1TeamName.length))}` +
+          `**${p2TeamName}** | ${p2Wins} wins\n` +
+          `${p1Lines}` +
+          `${' '.repeat(6)}` +
+          `${p2Lines}`
+        );
+      
+      const challengeRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`pvp_accept_${message.author.id}_${pvpTarget.id}`)
+          .setLabel('Accept')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`pvp_decline_${message.author.id}_${pvpTarget.id}`)
+          .setLabel('Decline')
+          .setStyle(ButtonStyle.Danger)
+      );
+      
+      const challengeMsg = await message.reply({ 
+        content: `<@${pvpTarget.id}>`,
+        embeds: [challengeEmbed], 
+        components: [challengeRow] 
+      });
+      
+      if (typeof challengeMsg?.createMessageComponentCollector !== 'function') return;
+      
+      const collector = challengeMsg.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        time: 60000,
+        filter: (i) => i.user.id === pvpTarget.id || i.user.id === message.author.id
+      });
+      
+      collector.on('collect', async (interaction) => {
+        // Only the challenged user can accept/decline
+        if (interaction.customId.startsWith('pvp_decline')) {
+          collector.stop('declined');
+          const declineEmbed = new EmbedBuilder()
+            .setColor('#9e9e9e')
+            .setDescription(`💔 **${pvpTarget.username}** declined the battle challenge. ${getRandomFace()}`);
+          return interaction.update({ embeds: [declineEmbed], components: [] });
+        }
+        
+        if (interaction.customId.startsWith('pvp_accept') && interaction.user.id === pvpTarget.id) {
+          collector.stop('accepted');
+          
+          // ---- Simulate PvP Battle with per-pet HP tracking ----
+          const battleLog = [];
+          
+          // Clone HP for per-pet tracking
+          const p1Hp = p1Team.map(p => p.hp);
+          const p2Hp = p2Team.map(p => p.hp);
+          
+          let turnCount = 0;
+          const maxTurns = 30;
+          
+          // Check if a team is alive
+          const teamAlive = (hpArr) => hpArr.some(h => h > 0);
+          // Get next alive pet index
+          const nextAlive = (hpArr, start) => {
+            for (let j = 0; j < hpArr.length; j++) {
+              const idx = (start + j) % hpArr.length;
+              if (hpArr[idx] > 0) return idx;
+            }
+            return -1;
+          };
+          
+          let p1Idx = 0;
+          let p2Idx = 0;
+          
+          while (teamAlive(p1Hp) && teamAlive(p2Hp) && turnCount < maxTurns) {
+            turnCount++;
+            
+            p1Idx = nextAlive(p1Hp, p1Idx);
+            p2Idx = nextAlive(p2Hp, p2Idx);
+            if (p1Idx === -1 || p2Idx === -1) break;
+            
+            const a1 = p1Team[p1Idx];
+            const d2 = p2Team[p2Idx];
+            
+            // P1 attacks
+            const isCrit1 = Math.random() * 100 < a1.crit;
+            const critMult1 = isCrit1 ? 1.8 : 1.0;
+            const dodged1 = Math.random() * 100 < (d2.spd / 12);
+            if (!dodged1) {
+              let dmg = Math.max(1, Math.floor((a1.atk * critMult1) - (d2.def * 0.4)));
+              dmg += Math.floor(Math.random() * 20);
+              p2Hp[p2Idx] = Math.max(0, p2Hp[p2Idx] - dmg);
+              const critTag = isCrit1 ? ' **CRIT!**' : '';
+              battleLog.push(`${a1.emoji} ${a1.name} → ${d2.emoji} ${d2.name} **${dmg}** dmg${critTag}`);
+              if (p2Hp[p2Idx] <= 0) {
+                battleLog.push(`💀 ${d2.emoji} **${d2.name}** was defeated!`);
+              }
+            } else {
+              battleLog.push(`💨 ${d2.emoji} ${d2.name} dodged ${a1.emoji}'s attack!`);
+            }
+            
+            if (!teamAlive(p2Hp)) break;
+            
+            // P2 attacks
+            p2Idx = nextAlive(p2Hp, p2Idx);
+            p1Idx = nextAlive(p1Hp, p1Idx);
+            if (p1Idx === -1 || p2Idx === -1) break;
+            
+            const a2 = p2Team[p2Idx];
+            const d1 = p1Team[p1Idx];
+            
+            const isCrit2 = Math.random() * 100 < a2.crit;
+            const critMult2 = isCrit2 ? 1.8 : 1.0;
+            const dodged2 = Math.random() * 100 < (d1.spd / 12);
+            if (!dodged2) {
+              let dmg = Math.max(1, Math.floor((a2.atk * critMult2) - (d1.def * 0.4)));
+              dmg += Math.floor(Math.random() * 20);
+              p1Hp[p1Idx] = Math.max(0, p1Hp[p1Idx] - dmg);
+              const critTag = isCrit2 ? ' **CRIT!**' : '';
+              battleLog.push(`${a2.emoji} ${a2.name} → ${d1.emoji} ${d1.name} **${dmg}** dmg${critTag}`);
+              if (p1Hp[p1Idx] <= 0) {
+                battleLog.push(`💀 ${d1.emoji} **${d1.name}** was defeated!`);
+              }
+            } else {
+              battleLog.push(`💨 ${d1.emoji} ${d1.name} dodged ${a2.emoji}'s attack!`);
+            }
+            
+            // Rotate to next pet
+            p1Idx = (p1Idx + 1) % p1Team.length;
+            p2Idx = (p2Idx + 1) % p2Team.length;
+          }
+          
+          // Determine winner
+          const p1Alive = p1Hp.reduce((a, h) => a + Math.max(0, h), 0);
+          const p2Alive = p2Hp.reduce((a, h) => a + Math.max(0, h), 0);
+          const p1Won = p1Alive >= p2Alive;
+          const winnerName = p1Won ? message.author.username : pvpTarget.username;
+          const loserName = p1Won ? pvpTarget.username : message.author.username;
+          const winnerId = p1Won ? user.id : pvpTarget.id;
+          const loserId = p1Won ? pvpTarget.id : user.id;
+          
+          // Rewards
+          const winCowoncy = 800 + Math.floor(Math.random() * 400);
+          const winXp = 300;
+          const loseCowoncy = 150;
+          db.addCowoncy(winnerId, winCowoncy);
+          db.addCowoncy(loserId, loseCowoncy);
+          // Increment winner's win count
+          db.db.prepare('UPDATE users SET battles_won = battles_won + 1 WHERE id = ?').run(winnerId);
+          
+          // ===== Generate PvP Canvas Visual =====
+          const pvpPetDataP1 = p1Team.map((p, i) => ({
+            ...p,
+            hp: p1Hp[i],
+            color: p1Won ? '#43b581' : '#f04747'
+          }));
+          const pvpPetDataP2 = p2Team.map((p, i) => ({
+            ...p,
+            hp: p2Hp[i],
+            color: p1Won ? '#f04747' : '#43b581'
+          }));
+          
+          let pvpVisualBuf;
+          try {
+            pvpVisualBuf = await createBattleVisual(pvpPetDataP1, pvpPetDataP2.map(p => ({
+              ...p,
+              maxHp: p.maxHp,
+              weaponIcon: p.weaponIcon
+            })), turnCount, Math.max(p1Wins, p2Wins) + 1, winXp);
+          } catch (e) {
+            pvpVisualBuf = null;
+          }
+          
+          // Build result display lines like original
+          const p1ResultLines = p1Team.map((p, i) => {
+            const alive = p1Hp[i] > 0;
+            return `L. ${p.lvl} ${p.emoji} - ${p.buildEmoji} ${p.weaponIcon} ${alive ? '🟢' : '🔴'}`;
+          }).join('\n');
+          
+          const p2ResultLines = p2Team.map((p, i) => {
+            const alive = p2Hp[i] > 0;
+            return `L. ${p.lvl} ${p.emoji} - ${p.buildEmoji} ${p.weaponIcon} ${alive ? '🟢' : '🔴'}`;
+          }).join('\n');
+          
+          // Show last 6 battle log entries
+          const logDisplay = battleLog.slice(-6).join('\n');
+          
+          const resultEmbed = new EmbedBuilder()
+            .setColor(p1Won ? '#43b581' : '#f04747')
+            .setAuthor({
+              name: `⚔️ ${message.author.username} vs ${pvpTarget.username}`,
+              iconURL: message.author.displayAvatarURL()
+            })
+            .setDescription(
+              `**${p1TeamName}** 🐻${' '.repeat(16)}**${p2TeamName}**\n` +
+              `${p1ResultLines}\n\n` +
+              `${p2ResultLines}`
+            )
+            .addFields(
+              {
+                name: `📜 Battle Log`,
+                value: logDisplay || '*The battle was swift!*',
+                inline: false
+              }
+            )
+            .setFooter({ 
+              text: `${winnerName} wins! | ${turnCount} turns | +${winCowoncy} cowoncy` 
+            });
+          
+          if (pvpVisualBuf) {
+            const pvpAttachment = new AttachmentBuilder(pvpVisualBuf, { name: 'pvp_battle.png' });
+            resultEmbed.setImage('attachment://pvp_battle.png');
+            return interaction.update({ 
+              content: `**${winnerName}** wins! 🏆`,
+              embeds: [resultEmbed], 
+              files: [pvpAttachment],
+              components: [] 
+            });
+          } else {
+            return interaction.update({ 
+              content: `**${winnerName}** wins! 🏆`,
+              embeds: [resultEmbed], 
+              components: [] 
+            });
+          }
+        }
+      });
+      
+      collector.on('end', (collected, reason) => {
+        if (reason === 'time') {
+          const timeoutEmbed = new EmbedBuilder()
+            .setColor('#9e9e9e')
+            .setDescription(`⏰ Battle challenge timed out. **${pvpTarget.username}** didn't respond in time.`);
+          challengeMsg.edit({ embeds: [timeoutEmbed], components: [] }).catch(() => {});
+        }
+      });
+      
+      return; // Exit early, collector handles the rest
     }
 
     // ========== PvE BATTLE (original) ==========
