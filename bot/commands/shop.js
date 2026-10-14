@@ -367,26 +367,19 @@ module.exports = {
       return;
     }
 
-    // --- 2. HANDLE COMMON & RARE CRATES / LOOTBOXES (Supports single & multi-crate) ---
+    // --- 2. HANDLE COMMON & RARE CRATES (Animals only, NO Cowoncy) ---
     if (targetId === 'crate_common' || targetId === 'crate_rare') {
       db.removeItem(user.id, targetId, qty);
       const isRare = targetId === 'crate_rare';
 
-      let totalCash = 0;
       const allAnimals = [];
 
       for (let i = 0; i < qty; i++) {
-        const minCash = isRare ? 2500 : 500;
-        const maxCash = isRare ? 10000 : 2500;
-        const cowoncyReward = Math.floor(Math.random() * (maxCash - minCash + 1)) + minCash;
-        totalCash += cowoncyReward;
-
         const animalCount = isRare ? 2 : 1;
         const rolled = getRandomAnimals(animalCount, isRare ? 2.0 : 0.5);
         allAnimals.push(...rolled);
       }
 
-      db.addCowoncy(user.id, totalCash);
       db.recordHunt(user.id, allAnimals);
 
       const openMsg = await message.reply(
@@ -414,7 +407,6 @@ module.exports = {
           .setTitle(`✨ Opened ${qty}x ${isRare ? '🎁 Rare Crates' : '📦 Common Crates'}! ${getRandomFace()}`)
           .setDescription(
             `You cracked open the crates and found:\n\n` +
-            `🪙 **+${totalCash.toLocaleString()} Cowoncy**\n` +
             `🐾 **Animals (${allAnimals.length}):**\n` +
             `${animalLines.join('\n')}\n`
           );
@@ -454,24 +446,18 @@ module.exports = {
       return message.reply(`🧪 **EXP Elixir consumed!** Granted **+500 EXP** to all active battle team members! ⚡`);
     }
 
-    // --- 4. EPIC & MYTHICAL CRATES ---
+    // --- 4. EPIC & MYTHICAL CRATES (Animals only, NO Cowoncy) ---
     if (targetId === 'crate_epic' || targetId === 'crate_mythical') {
       db.removeItem(user.id, targetId, qty);
       const isMythical = targetId === 'crate_mythical';
 
-      let totalCash = 0;
       const allAnimals = [];
 
       for (let i = 0; i < qty; i++) {
-        const minCash = isMythical ? 20000 : 5000;
-        const maxCash = isMythical ? 50000 : 15000;
-        totalCash += Math.floor(Math.random() * (maxCash - minCash + 1)) + minCash;
-
         const rolled = getRandomAnimals(isMythical ? 3 : 2, isMythical ? 5.0 : 3.0);
         allAnimals.push(...rolled);
       }
 
-      db.addCowoncy(user.id, totalCash);
       db.recordHunt(user.id, allAnimals);
 
       const label = isMythical ? '🌟 Mythical Crates' : '🟣 Epic Crates';
@@ -496,7 +482,6 @@ module.exports = {
           .setTitle(`✨ Opened ${qty}x ${label}! ${getRandomFace()}`)
           .setDescription(
             `You cracked open the crates and found:\n\n` +
-            `🪙 **+${totalCash.toLocaleString()} Cowoncy**\n` +
             `🐾 **Animals (${allAnimals.length}):**\n` +
             `${animalLines.join('\n')}\n`
           );
@@ -505,30 +490,24 @@ module.exports = {
       return;
     }
 
-    // --- 5. LOOTBOXES ---
+    // --- 5. LOOTBOXES (NO Cowoncy — only gems, animals, weapons) ---
     if (targetId === 'lootbox_basic' || targetId === 'lootbox_premium') {
       db.removeItem(user.id, targetId, qty);
       const isPremium = targetId === 'lootbox_premium';
 
-      let totalCash = 0;
       const rewards = [];
 
       for (let i = 0; i < qty; i++) {
         const roll = Math.random();
         if (isPremium) {
-          if (roll < 0.3) {
-            // Cowoncy
-            const cash = Math.floor(Math.random() * 8000) + 3000;
-            totalCash += cash;
-            rewards.push(`🪙 **${cash.toLocaleString()} Cowoncy**`);
-          } else if (roll < 0.6) {
+          if (roll < 0.4) {
             // Gem
             const gems = ['gem_luck', 'gem_xp', 'gem_cowoncy'];
             const gem = gems[Math.floor(Math.random() * gems.length)];
             const gemItem = getItemById(gem);
             db.addItem(user.id, gem, 1);
             rewards.push(`${gemItem.emoji} **${gemItem.name}** x1`);
-          } else if (roll < 0.85) {
+          } else if (roll < 0.75) {
             // Rare animal
             const animal = getRandomAnimals(1, 3.0)[0];
             db.recordHunt(user.id, [animal]);
@@ -543,10 +522,6 @@ module.exports = {
           }
         } else {
           if (roll < 0.5) {
-            const cash = Math.floor(Math.random() * 2000) + 500;
-            totalCash += cash;
-            rewards.push(`🪙 **${cash.toLocaleString()} Cowoncy**`);
-          } else if (roll < 0.8) {
             const gems = ['gem_luck', 'gem_xp'];
             const gem = gems[Math.floor(Math.random() * gems.length)];
             const gemItem = getItemById(gem);
@@ -559,8 +534,6 @@ module.exports = {
           }
         }
       }
-
-      if (totalCash > 0) db.addCowoncy(user.id, totalCash);
 
       const label = isPremium ? '🎲 Premium Lootbox' : '🎰 Basic Lootbox';
       const embed = new EmbedBuilder()
