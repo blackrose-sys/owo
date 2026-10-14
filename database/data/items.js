@@ -1,13 +1,57 @@
 // Item catalogue, weapons, crates, and shop items
 const SHOP_ITEMS = [
+  // ═══════════════════════ RINGS (Page 1) ═══════════════════════
+  // Based on real OwO: Common (10), Rare (1k), Epic (10k), Mythical (100k), Legendary (1M), Fabled (10M)
+  {
+    id: 'ring_common',
+    name: 'Common Ring',
+    emoji: '💍',
+    price: 10,
+    category: 'rings',
+    description: 'A simple copper band. Required for `owo marry`. Basic but sincere!'
+  },
   {
     id: 'ring',
-    name: 'Love Ring',
+    name: 'Rare Ring',
     emoji: '💍',
-    price: 10000,
-    category: 'social',
-    description: 'A sparkling diamond ring required to marry your beloved companion in owo marry.'
+    price: 1000,
+    category: 'rings',
+    description: 'A silver ring with a small gem. Shows your commitment!'
   },
+  {
+    id: 'ring_epic',
+    name: 'Epic Ring',
+    emoji: '💎',
+    price: 10000,
+    category: 'rings',
+    description: 'A gold ring encrusted with sapphires. Grants +5% daily bonus when married.'
+  },
+  {
+    id: 'ring_mythical',
+    name: 'Mythical Ring',
+    emoji: '✨',
+    price: 100000,
+    category: 'rings',
+    description: 'A glowing enchanted ring. Grants +10% daily bonus and doubles pray/curse effects.'
+  },
+  {
+    id: 'ring_legendary',
+    name: 'Legendary Ring',
+    emoji: '👑',
+    price: 1000000,
+    category: 'rings',
+    description: 'A ring forged in dragon fire. Grants +20% daily, +5% hunt luck, and a unique title.'
+  },
+  {
+    id: 'ring_fabled',
+    name: 'Fabled Ring',
+    emoji: '⚜️',
+    price: 10000000,
+    category: 'rings',
+    description: 'The rarest ring in existence. Grants +50% daily, +10% hunt luck, exclusive profile frame.'
+  },
+
+  // ═══════════════════════ CRATES (Page 2) ═══════════════════════
   {
     id: 'crate_common',
     name: 'Common Crate',
@@ -22,7 +66,7 @@ const SHOP_ITEMS = [
     emoji: '🎁',
     price: 5000,
     category: 'crates',
-    description: 'A gilded crate with higher chances of Rare, Epic, and Mythic animals plus bonus Cowoncy.'
+    description: 'A gilded crate with higher chances of Rare, Epic, and Mythical animals plus bonus Cowoncy.'
   },
   {
     id: 'crate_weapon',
@@ -33,12 +77,64 @@ const SHOP_ITEMS = [
     description: 'Guaranteed to grant a battle weapon from Common to Legendary rank.'
   },
   {
+    id: 'crate_epic',
+    name: 'Epic Crate',
+    emoji: '🟣',
+    price: 25000,
+    category: 'crates',
+    description: 'A pristine purple crate. Guaranteed Epic+ animals and 5,000-15,000 Cowoncy.'
+  },
+  {
+    id: 'crate_mythical',
+    name: 'Mythical Crate',
+    emoji: '🌟',
+    price: 100000,
+    category: 'crates',
+    description: 'An ethereal crate radiating power. Contains Mythical+ animals and 20,000-50,000 Cowoncy.'
+  },
+
+  // ═══════════════════════ LOOTBOXES ═══════════════════════
+  {
+    id: 'lootbox_basic',
+    name: 'Basic Lootbox',
+    emoji: '🎰',
+    price: 2000,
+    category: 'lootbox',
+    description: 'Contains gems, weapon shards, or a random consumable. Great starter pick!'
+  },
+  {
+    id: 'lootbox_premium',
+    name: 'Premium Lootbox',
+    emoji: '🎲',
+    price: 15000,
+    category: 'lootbox',
+    description: 'High-quality lootbox with rare gems, powerful consumables, or even a weapon.'
+  },
+
+  // ═══════════════════════ GEMS & CONSUMABLES ═══════════════════════
+  {
     id: 'gem_luck',
     name: 'Luck Gem',
     emoji: '💎',
     price: 3000,
     category: 'gems',
     description: 'Shines with radiant fortune. Grants +50% higher animal rarity chances for 30 minutes.'
+  },
+  {
+    id: 'gem_xp',
+    name: 'XP Gem',
+    emoji: '🟢',
+    price: 3500,
+    category: 'gems',
+    description: 'Glowing green crystal. Grants +100% XP from hunts and battles for 30 minutes.'
+  },
+  {
+    id: 'gem_cowoncy',
+    name: 'Cowoncy Gem',
+    emoji: '🟡',
+    price: 4000,
+    category: 'gems',
+    description: 'Golden gem that doubles Cowoncy earned from all activities for 30 minutes.'
   },
   {
     id: 'bait',
@@ -63,8 +159,195 @@ const SHOP_ITEMS = [
     price: 6000,
     category: 'battle',
     description: 'Shields your team in battle, increasing DEF by +25 for 5 battles.'
-  }
+  },
+  {
+    id: 'revive_potion',
+    name: 'Revive Potion',
+    emoji: '❤️‍🩹',
+    price: 3500,
+    category: 'battle',
+    description: 'Fully restores a fallen battle pet. Revives with full HP for the next fight.'
+  },
+  {
+    id: 'speed_scroll',
+    name: 'Speed Scroll',
+    emoji: '📜',
+    price: 2800,
+    category: 'battle',
+    description: 'Boosts your team\'s speed by +20 for the next 3 battles. Strike first!'
+  },
+  {
+    id: 'atk_potion',
+    name: 'Attack Potion',
+    emoji: '⚔️',
+    price: 3200,
+    category: 'battle',
+    description: 'Enhances your team\'s ATK by +15 for the next 5 battles. More damage!'
+  },
+  {
+    id: 'hunter_compass',
+    name: 'Hunter\'s Compass',
+    emoji: '🧭',
+    price: 5000,
+    category: 'consumable',
+    description: 'Points you toward rare animals. Guarantees at least 1 Rare+ animal on next 10 hunts.'
+  },
+  {
+    id: 'essence_booster',
+    name: 'Essence Booster',
+    emoji: '🌀',
+    price: 4500,
+    category: 'consumable',
+    description: 'Doubles sacrifice essence gained from your next 10 sacrifices.'
+  },
+
+  // ═══════════════════════ WALLPAPERS (Pages 3-5) ═══════════════════════
+  {
+    id: 'wp_sunset',
+    name: 'Sunset Horizon',
+    emoji: '🌅',
+    price: 35000,
+    category: 'wallpaper',
+    description: 'A breathtaking orange-purple sunset over the ocean. Profile background.'
+  },
+  {
+    id: 'wp_galaxy',
+    name: 'Galaxy Nebula',
+    emoji: '🌌',
+    price: 35000,
+    category: 'wallpaper',
+    description: 'Deep space nebula with swirling purple and blue cosmic dust.'
+  },
+  {
+    id: 'wp_sakura',
+    name: 'Sakura Blossom',
+    emoji: '🌸',
+    price: 35000,
+    category: 'wallpaper',
+    description: 'Cherry blossom petals floating across a serene Japanese garden.'
+  },
+  {
+    id: 'wp_aurora',
+    name: 'Northern Lights',
+    emoji: '🌈',
+    price: 40000,
+    category: 'wallpaper',
+    description: 'Vivid green and purple aurora borealis dancing across the arctic sky.'
+  },
+  {
+    id: 'wp_ocean',
+    name: 'Deep Ocean',
+    emoji: '🌊',
+    price: 35000,
+    category: 'wallpaper',
+    description: 'Calm deep ocean waves with bioluminescent creatures glowing below.'
+  },
+  {
+    id: 'wp_forest',
+    name: 'Enchanted Forest',
+    emoji: '🌲',
+    price: 35000,
+    category: 'wallpaper',
+    description: 'Mystical forest with glowing fireflies and ancient towering trees.'
+  },
+  {
+    id: 'wp_volcano',
+    name: 'Volcanic Forge',
+    emoji: '🌋',
+    price: 40000,
+    category: 'wallpaper',
+    description: 'Molten lava flows surrounded by obsidian cliffs. Fiery and intense!'
+  },
+  {
+    id: 'wp_cyberpunk',
+    name: 'Cyberpunk City',
+    emoji: '🏙️',
+    price: 40000,
+    category: 'wallpaper',
+    description: 'Neon-lit futuristic cityscape with rain-slicked streets and holograms.'
+  },
+  {
+    id: 'wp_snowmountain',
+    name: 'Snow Mountain',
+    emoji: '🏔️',
+    price: 35000,
+    category: 'wallpaper',
+    description: 'Pristine snow-capped mountain peak with clear blue skies.'
+  },
+  {
+    id: 'wp_desert',
+    name: 'Golden Desert',
+    emoji: '🏜️',
+    price: 35000,
+    category: 'wallpaper',
+    description: 'Endless golden sand dunes under a blazing desert sun.'
+  },
+  {
+    id: 'wp_candy',
+    name: 'Candy Land',
+    emoji: '🍭',
+    price: 38000,
+    category: 'wallpaper',
+    description: 'Sweet pastel candy kingdom with lollipop trees and chocolate rivers.'
+  },
+  {
+    id: 'wp_underwater',
+    name: 'Coral Reef',
+    emoji: '🐚',
+    price: 35000,
+    category: 'wallpaper',
+    description: 'Vibrant underwater coral reef teeming with tropical fish.'
+  },
+  {
+    id: 'wp_dragon',
+    name: 'Dragon\'s Lair',
+    emoji: '🐉',
+    price: 50000,
+    category: 'wallpaper',
+    description: 'An epic dragon\'s lair filled with treasure and glowing crystals. Premium!'
+  },
+  {
+    id: 'wp_anime',
+    name: 'Anime Skyline',
+    emoji: '🗼',
+    price: 45000,
+    category: 'wallpaper',
+    description: 'Beautiful anime-style twilight cityscape with shooting stars.'
+  },
+  {
+    id: 'wp_retro',
+    name: 'Retro Arcade',
+    emoji: '🕹️',
+    price: 38000,
+    category: 'wallpaper',
+    description: 'Nostalgic 80s arcade with pixel art, neon grids, and synth vibes.'
+  },
+  {
+    id: 'wp_space',
+    name: 'Space Station',
+    emoji: '🚀',
+    price: 42000,
+    category: 'wallpaper',
+    description: 'Orbital space station overlooking Earth with stars in the background.'
+  },
+  {
+    id: 'wp_haunted',
+    name: 'Haunted Mansion',
+    emoji: '🏚️',
+    price: 38000,
+    category: 'wallpaper',
+    description: 'Spooky haunted mansion on a foggy hill with a full moon. Halloween vibes!'
+  },
+  {
+    id: 'wp_rainbow',
+    name: 'Rainbow Valley',
+    emoji: '🌈',
+    price: 35000,
+    category: 'wallpaper',
+    description: 'Lush green valley with a double rainbow and cascading waterfall.'
+  },
 ];
+
 
 // Authentic OwO Weapons matching user screenshot and official armory
 const WEAPONS = [
