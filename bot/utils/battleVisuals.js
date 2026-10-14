@@ -15,8 +15,44 @@ function emojiToCodePoint(emoji) {
 
 async function getEmojiImage(emoji) {
   if (!emoji) return null;
+  if (imageCache.has(emoji)) return imageCache.get(emoji);
+
+  // 1. Support custom Discord emojis like <:gojo:1559983930629955714>
+  const customMatch = typeof emoji === 'string' && emoji.match(/<:(\w+):(\d+)>/);
+  if (customMatch) {
+    const name = customMatch[1].toLowerCase();
+    const id = customMatch[2];
+    const assetPath = path.join(__dirname, '..', '..', 'assets', 'emojis', `${name}.png`);
+    if (fs.existsSync(assetPath)) {
+      try {
+        const img = await loadImage(assetPath);
+        imageCache.set(emoji, img);
+        return img;
+      } catch (e) {}
+    }
+    try {
+      const url = `https://cdn.discordapp.com/emojis/${id}.png`;
+      const img = await loadImage(url);
+      imageCache.set(emoji, img);
+      return img;
+    } catch (e) {}
+  }
+
+  // 2. Direct named asset check in assets/emojis/
+  if (typeof emoji === 'string') {
+    const directAsset = path.join(__dirname, '..', '..', 'assets', 'emojis', `${emoji.toLowerCase()}.png`);
+    if (fs.existsSync(directAsset)) {
+      try {
+        const img = await loadImage(directAsset);
+        imageCache.set(emoji, img);
+        return img;
+      } catch (e) {}
+    }
+  }
+
+  // 3. Fallback to standard unicode twemoji
   const cp = emojiToCodePoint(emoji);
-  if (imageCache.has(cp)) return imageCache.get(cp);
+  if (cp && imageCache.has(cp)) return imageCache.get(cp);
 
   const localPath = path.join(EMOJI_DIR, `${cp}.png`);
   if (fs.existsSync(localPath)) {

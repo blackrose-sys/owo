@@ -43,20 +43,26 @@ function createClient() {
 
     console.log(`[OwO Bot] Logged in successfully as ${client.user.tag}! Active in ${client.guilds.cache.size} servers.`);
 
-    // Pre-cache application emojis & create cowoncy emoji if missing
+    // Pre-cache application emojis & create custom emojis if missing
     if (client.application?.emojis) {
       try {
         await client.application.emojis.fetch().catch(() => {});
-        let cowoncyEmoji = client.application.emojis.cache.find(e => e.name === 'cowoncy');
-        if (!cowoncyEmoji) {
-          const cowoncyPath = path.join(__dirname, '..', 'public', 'cowoncy.png');
-          if (fs.existsSync(cowoncyPath)) {
-            cowoncyEmoji = await client.application.emojis.create({ name: 'cowoncy', attachment: cowoncyPath });
-            console.log(`[OwO Bot] Created custom application emoji <:cowoncy:${cowoncyEmoji.id}>!`);
+        const customEmojiList = [
+          { name: 'cowoncy', path: path.join(__dirname, '..', 'public', 'cowoncy.png') },
+          { name: 'gojo', path: path.join(__dirname, '..', 'assets', 'emojis', 'gojo.png') },
+          { name: 'sukuna', path: path.join(__dirname, '..', 'assets', 'emojis', 'sukuna.png') },
+          { name: 'saitama', path: path.join(__dirname, '..', 'assets', 'emojis', 'saitama.png') },
+        ];
+
+        for (const item of customEmojiList) {
+          let found = client.application.emojis.cache.find(e => e.name.toLowerCase() === item.name);
+          if (!found && fs.existsSync(item.path)) {
+            found = await client.application.emojis.create({ name: item.name, attachment: item.path });
+            console.log(`[OwO Bot] Created custom application emoji <:${item.name}:${found.id}>!`);
           }
         }
       } catch (err) {
-        console.log('[OwO Bot] Cowoncy emoji check note:', err.message);
+        console.log('[OwO Bot] Custom emoji check note:', err.message);
       }
       console.log(`[OwO Bot] Cached ${client.application.emojis.cache.size} custom emojis.`);
     }

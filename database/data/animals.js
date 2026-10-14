@@ -210,9 +210,9 @@ const ANIMALS = [
   { id: 'muzan', name: 'Muzan Kibutsuji', emoji: '🌑', tier: 'fabled', points: 9000, hp: 350, atk: 138, def: 90, spd: 52 },
 
   // --- Jujutsu Kaisen ---
-  { id: 'gojo', name: 'Gojo Satoru', emoji: '💜', tier: 'fabled', points: 9000, hp: 300, atk: 145, def: 80, spd: 60 },
+  { id: 'gojo', name: 'Gojo Satoru', emoji: '<:gojo:1559983930629955714>', tier: 'fabled', points: 9000, hp: 300, atk: 145, def: 80, spd: 60 },
   { id: 'yuji', name: 'Yuji Itadori', emoji: '🩷', tier: 'legendary', points: 1200, hp: 135, atk: 58, def: 32, spd: 36 },
-  { id: 'sukuna', name: 'Ryomen Sukuna', emoji: '👁️', tier: 'fabled', points: 10000, hp: 360, atk: 150, def: 85, spd: 55 },
+  { id: 'sukuna', name: 'Ryomen Sukuna', emoji: '<:sukuna:1559983932307673099>', tier: 'fabled', points: 10000, hp: 360, atk: 150, def: 85, spd: 55 },
 
   // --- Attack on Titan ---
   { id: 'eren', name: 'Eren Yeager', emoji: '⚔️', tier: 'legendary', points: 1200, hp: 138, atk: 60, def: 36, spd: 30 },
@@ -243,7 +243,7 @@ const ANIMALS = [
   { id: 'baymax', name: 'Baymax', emoji: '🤍', tier: 'legendary', points: 1200, hp: 180, atk: 35, def: 55, spd: 20 },
 
   // --- Misc Anime ---
-  { id: 'saitama', name: 'Saitama', emoji: '👊', tier: 'fabled', points: 12000, hp: 400, atk: 200, def: 60, spd: 55 },
+  { id: 'saitama', name: 'Saitama', emoji: '<:saitama:1559983935579095060>', tier: 'fabled', points: 12000, hp: 400, atk: 200, def: 60, spd: 55 },
   { id: 'gon', name: 'Gon Freecss', emoji: '💚', tier: 'legendary', points: 1200, hp: 125, atk: 55, def: 30, spd: 38 },
   { id: 'killua', name: 'Killua Zoldyck', emoji: '⚡', tier: 'legendary', points: 1200, hp: 120, atk: 58, def: 28, spd: 42 },
   { id: 'edward_elric', name: 'Edward Elric', emoji: '⚙️', tier: 'legendary', points: 1200, hp: 128, atk: 56, def: 34, spd: 34 },

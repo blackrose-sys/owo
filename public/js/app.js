@@ -12,6 +12,24 @@ const state = {
   activeFilter: 'all'
 };
 
+function formatEmoji(emojiStr) {
+  if (!emojiStr) return '';
+  const match = String(emojiStr).match(/<:(\w+):(\d+)>/);
+  if (match) {
+    const name = match[1].toLowerCase();
+    return `<img src="/emojis/${name}.png" class="custom-emoji-img" alt="${name}">`;
+  }
+  return emojiStr;
+}
+
+function cleanEmojiText(emojiStr) {
+  if (!emojiStr) return '👤';
+  const match = String(emojiStr).match(/<:(\w+):(\d+)>/);
+  if (match) return '✨';
+  return emojiStr;
+}
+
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
@@ -143,7 +161,7 @@ async function loadLeaderboards() {
         <div class="lb-item">
           <div class="lb-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</div>
           <div class="lb-user">
-            <span>${u.display_animal || '🐶'}</span>
+            <span>${formatEmoji(u.display_animal || '🐶')}</span>
             <span>${u.username}</span>
           </div>
           <div class="lb-score"><img src="/cowoncy.png" class="cowoncy-icon" alt="cowoncy"> ${u.cowoncy.toLocaleString()}</div>
@@ -157,7 +175,7 @@ async function loadLeaderboards() {
         <div class="lb-item">
           <div class="lb-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</div>
           <div class="lb-user">
-            <span>${u.display_animal || '🐶'}</span>
+            <span>${formatEmoji(u.display_animal || '🐶')}</span>
             <span>${u.username}</span>
           </div>
           <div class="lb-score">🌲 ${u.hunts.toLocaleString()}</div>
@@ -189,7 +207,7 @@ function renderZoo() {
 
     return `
       <div class="animal-card ${isOwned ? 'owned' : ''}">
-        <div class="animal-emoji">${animal.emoji}</div>
+        <div class="animal-emoji">${formatEmoji(animal.emoji)}</div>
         <div class="animal-name">${animal.name}</div>
         <div class="animal-tier" style="background: ${tierMeta.color}22; color: ${tierMeta.color}; border: 1px solid ${tierMeta.color}44;">
           ${tierMeta.name}
@@ -689,7 +707,7 @@ async function refreshAdminUsers(preferredUserId = null) {
       adminState.users.forEach(u => {
         const opt = document.createElement('option');
         opt.value = u.id;
-        const emoji = u.display_animal || '👤';
+        const emoji = cleanEmojiText(u.display_animal);
         opt.textContent = `${emoji} ${u.username} (${u.cowoncy.toLocaleString()} Cowoncy) — ID: ${u.id}`;
         sel.appendChild(opt);
       });
@@ -802,7 +820,7 @@ function updateAdminTargetCard(user, zoo = null, weapons = null) {
   if (nameEl) nameEl.textContent = user.username;
   if (idEl) idEl.textContent = `ID: ${user.id}`;
   if (balEl) balEl.textContent = `${user.cowoncy.toLocaleString()}`;
-  if (avatarEl) avatarEl.textContent = user.display_animal || '👤';
+  if (avatarEl) avatarEl.innerHTML = formatEmoji(user.display_animal || '👤');
 
   if (zooCountEl && zoo) {
     const totalCount = zoo.reduce((acc, z) => acc + (z.count || 0), 0);
