@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const db = require('../../database/db');
 const { 
   SHOP_ITEMS, 
@@ -12,67 +12,154 @@ const {
 const { getRandomAnimals, getAnimalById } = require('../../database/data/animals');
 const { getRandomFace, getCowoncyEmoji } = require('../../database/data/dialogue');
 
+// Shop page definitions (ordered)
+const SHOP_PAGES = [
+  { title: 'OwO Shop: Rings', filter: 'rings', desc: 'Purchase a ring to propose to someone!\nAll rings are the same. Different tiers are available\nto show off your love!\n\n• `owo buy {id}` to buy an item\n• `owo sell {id}` to sell an item for 75% of its original price\n• `owo marry @user {id}` to use the ring' },
+  { title: 'OwO Shop: Crates & Lootboxes', filter: ['crates', 'lootbox'], desc: 'Open crates for animals, weapons, and loot!\n\n• `owo buy {id}` to buy a crate\n• `owo use {id} all` to open all crates at once' },
+  { title: 'OwO Shop: Gems & Consumables', filter: ['gems', 'consumable', 'battle'], desc: 'Power up your hunts, battles, and more!\n\n• `owo buy {id}` to buy an item\n• `owo use {id}` to activate the item' },
+  { title: 'OwO Shop: Wallpapers (1/2)', filter: 'wallpaper', desc: 'Customize your profile background!\nOnce purchased, wallpapers cannot be sold back.\n\n• `owo buy {id}` to buy a wallpaper\n• `owo wallpaper set {id}` to equip it', subPage: 0 },
+  { title: 'OwO Shop: Wallpapers (2/2)', filter: 'wallpaper', desc: 'More wallpapers for your profile!\n\n• `owo buy {id}` to buy a wallpaper\n• `owo wallpaper set {id}` to equip it', subPage: 1 },
+];
+
+const TOTAL_PAGES = SHOP_PAGES.length;
+
+// Format price nicely (10 → 10, 1000 → 1K, 1000000 → 1M, 10000000 → 10M)
+function formatPrice(price) {
+  if (price >= 10000000) return `${(price / 1000000)}M`;
+  if (price >= 1000000) return `${(price / 1000000)}M`;
+  if (price >= 1000) return `${(price / 1000)}K`;
+  return price.toString();
+}
+
+function buildShopEmbed(pageIndex, user, client) {
+  const page = SHOP_PAGES[pageIndex];
+  const filterArray = Array.isArray(page.filter) ? page.filter : [page.filter];
+  let items = SHOP_ITEMS.filter(i => filterArray.includes(i.category));
+
+  // Handle wallpaper sub-pages (9 items per page)
+  if (page.subPage !== undefined) {
+    const perPage = 9;
+    items = items.slice(page.subPage * perPage, (page.subPage + 1) * perPage);
+  }
+
+  // Build OwO-style item list with dashed lines
+  let itemList = '';
+  items.forEach((item, idx) => {
+    const num = page.subPage !== undefined ? (page.subPage * 9) + idx + 1 : idx + 1;
+    const priceStr = formatPrice(item.price);
+    const nameLen = item.name.length;
+    // Create dashed separator to align prices (target ~45 chars total width)
+    const dashCount = Math.max(3, 30 - nameLen - priceStr.length);
+    const dashes = '─'.repeat(dashCount);
+    itemList += `\`${num}\` ${item.emoji} ${item.name} ${dashes} ${priceStr}\n`;
+  });
+
+  const embed = new EmbedBuilder()
+    .setColor('#2b2d31')
+    .setTitle(`🛍️ ${page.title}`)
+    .setDescription(`${page.desc}\n\n──────────────────────────\n\n${itemList}\nPage ${pageIndex + 1}/${TOTAL_PAGES}`)
+    .setFooter({ text: `Use the arrows to navigate pages • owo buy <id> [qty]` });
+
+  return embed;
+}
+
+function buildShopButtons(pageIndex, userId) {
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`shop_prev_${userId}_${pageIndex}`)
+      .setEmoji('◀️')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(pageIndex === 0),
+    new ButtonBuilder()
+      .setCustomId(`shop_page_${userId}_${pageIndex}`)
+      .setLabel(`${pageIndex + 1}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId(`shop_next_${userId}_${pageIndex}`)
+      .setEmoji('▶️')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(pageIndex === TOTAL_PAGES - 1),
+  );
+  return row;
+}
+
 module.exports = {
   shop: async (message, args, user) => {
-    const cEmoji = getCowoncyEmoji(message?.client);
-    const page = (args[0] || '1').toLowerCase();
+    // Determine starting page from args
+    let startPage = 0;
+    const pageArg = (args[0] || '').toLowerCase();
 
-    // Determine which category/page to show
-    const categories = {
-      '1': { title: '💍 Rings', filter: 'rings', desc: 'Buy rings to marry your partner! Higher rings = bigger perks.' },
-      'rings': { title: '💍 Rings', filter: 'rings', desc: 'Buy rings to marry your partner! Higher rings = bigger perks.' },
-      '2': { title: '📦 Crates & Lootboxes', filter: ['crates', 'lootbox'], desc: 'Open crates for animals, weapons, and loot!' },
-      'crates': { title: '📦 Crates & Lootboxes', filter: ['crates', 'lootbox'], desc: 'Open crates for animals, weapons, and loot!' },
-      '3': { title: '💎 Gems & Consumables', filter: ['gems', 'consumable', 'battle'], desc: 'Power up your hunts, battles, and more!' },
-      'gems': { title: '💎 Gems & Consumables', filter: ['gems', 'consumable', 'battle'], desc: 'Power up your hunts, battles, and more!' },
-      'items': { title: '💎 Gems & Consumables', filter: ['gems', 'consumable', 'battle'], desc: 'Power up your hunts, battles, and more!' },
-      '4': { title: '🖼️ Wallpapers', filter: 'wallpaper', desc: 'Customize your profile background! (Cannot be sold back)' },
-      'wp': { title: '🖼️ Wallpapers', filter: 'wallpaper', desc: 'Customize your profile background! (Cannot be sold back)' },
-      'wallpaper': { title: '🖼️ Wallpapers', filter: 'wallpaper', desc: 'Customize your profile background! (Cannot be sold back)' },
-      'wallpapers': { title: '🖼️ Wallpapers', filter: 'wallpaper', desc: 'Customize your profile background! (Cannot be sold back)' },
+    const pageMap = {
+      '1': 0, 'rings': 0, 'ring': 0,
+      '2': 1, 'crates': 1, 'crate': 1, 'lootbox': 1,
+      '3': 2, 'gems': 2, 'items': 2, 'consumable': 2, 'consumables': 2,
+      '4': 3, 'wp': 3, 'wallpaper': 3, 'wallpapers': 3,
+      '5': 4,
     };
 
-    const cat = categories[page];
-
-    if (!cat) {
-      // Show overview page
-      const embed = new EmbedBuilder()
-        .setColor('#00e5ff')
-        .setTitle(`🛍️ OwO Emporium & Shop ${getRandomFace()}`)
-        .setDescription(
-          `Welcome to the market! Use \`owo shop <page>\` to browse.\n\n` +
-          `**📖 Pages:**\n` +
-          `> \`owo shop 1\` — 💍 Rings\n` +
-          `> \`owo shop 2\` — 📦 Crates & Lootboxes\n` +
-          `> \`owo shop 3\` — 💎 Gems & Consumables\n` +
-          `> \`owo shop 4\` — 🖼️ Wallpapers\n\n` +
-          `💰 Your balance: **${cEmoji} ${user.cowoncy.toLocaleString()} Cowoncy**\n` +
-          `To buy: \`owo buy <item_id> [quantity]\``
-        )
-        .setFooter({ text: `Tip: 'owo shop wp' or 'owo shop rings' also works!` });
-      return message.reply({ embeds: [embed] });
+    if (pageMap[pageArg] !== undefined) {
+      startPage = pageMap[pageArg];
     }
 
-    // Filter items by category
-    const filterArray = Array.isArray(cat.filter) ? cat.filter : [cat.filter];
-    const items = SHOP_ITEMS.filter(i => filterArray.includes(i.category));
+    let currentPage = startPage;
+    const embed = buildShopEmbed(currentPage, user, message.client);
+    const row = buildShopButtons(currentPage, message.author.id);
 
-    const embed = new EmbedBuilder()
-      .setColor('#00e5ff')
-      .setTitle(`🛍️ ${cat.title} ${getRandomFace()}`)
-      .setDescription(`${cat.desc}\n💰 Your balance: **${cEmoji} ${user.cowoncy.toLocaleString()} Cowoncy**\n`);
+    const sentMsg = await message.reply({ embeds: [embed], components: [row] });
 
-    for (const item of items) {
-      embed.addFields({
-        name: `${item.emoji} ${item.name} — ${cEmoji} ${item.price.toLocaleString()}`,
-        value: `ID: \`${item.id}\` • ${item.description}`,
-        inline: false
-      });
-    }
+    // Collect button interactions for 60 seconds
+    const collector = sentMsg.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      time: 60000,
+    });
 
-    embed.setFooter({ text: `Buy: 'owo buy <id> [qty]' | Pages: 1-Rings, 2-Crates, 3-Gems, 4-Wallpapers` });
-    return message.reply({ embeds: [embed] });
+    collector.on('collect', async (interaction) => {
+      // Only the original user can interact
+      if (interaction.user.id !== message.author.id) {
+        return interaction.reply({ content: `This shop menu isn't yours! Open your own with \`owo shop\``, ephemeral: true });
+      }
+
+      const parts = interaction.customId.split('_');
+      const action = parts[1]; // prev or next
+
+      if (action === 'prev' && currentPage > 0) {
+        currentPage--;
+      } else if (action === 'next' && currentPage < TOTAL_PAGES - 1) {
+        currentPage++;
+      }
+
+      const newEmbed = buildShopEmbed(currentPage, user, message.client);
+      const newRow = buildShopButtons(currentPage, message.author.id);
+
+      await interaction.update({ embeds: [newEmbed], components: [newRow] });
+    });
+
+    collector.on('end', async () => {
+      // Disable buttons after timeout
+      try {
+        const disabledRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('shop_prev_disabled')
+            .setEmoji('◀️')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true),
+          new ButtonBuilder()
+            .setCustomId('shop_page_disabled')
+            .setLabel(`${currentPage + 1}`)
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true),
+          new ButtonBuilder()
+            .setCustomId('shop_next_disabled')
+            .setEmoji('▶️')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true),
+        );
+        await sentMsg.edit({ components: [disabledRow] });
+      } catch (e) {}
+    });
   },
+
 
   buy: async (message, args, user) => {
     const target = (args[0] || '').toLowerCase();
