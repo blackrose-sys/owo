@@ -8,6 +8,7 @@ const social = require('../commands/social');
 const shop = require('../commands/shop');
 const profile = require('../commands/profile');
 const admin = require('../commands/admin');
+const fun = require('../commands/fun');
 const { getRandomFace } = require('../../database/data/dialogue');
 const { checkCooldown } = require('./cooldownHandler');
 
@@ -47,6 +48,31 @@ const COMMANDS = {
   weject: social.eject,
   voteoff: social.eject,
 
+  // Fun & Utility
+  define: fun.define,
+  def: fun.define,
+  dictionary: fun.define,
+  gif: fun.gif,
+  giphy: fun.gif,
+  pic: fun.pic,
+  picture: fun.pic,
+  image: fun.pic,
+  img: fun.pic,
+  translate: fun.translate,
+  tr: fun.translate,
+  bell: fun.bell,
+  ring: fun.bell,
+  ding: fun.bell,
+  emoji: fun.emoji,
+  emote: fun.emoji,
+  wallpaper: fun.wallpaper,
+  wp: fun.wallpaper,
+  wallpapers: fun.wallpaper,
+  battlesetting: fun.battlesetting,
+  battlesettings: fun.battlesetting,
+  bsetting: fun.battlesetting,
+  bs: fun.battlesetting,
+
   // Zoo & Compendium
   hunt: zoo.hunt,
   h: zoo.hunt,
@@ -60,6 +86,8 @@ const COMMANDS = {
   dex: zoo.owodex,
   autohunt: zoo.autohunt,
   ah: zoo.autohunt,
+  huntbot: zoo.autohunt,
+  hb: zoo.autohunt,
   rename: zoo.rename,
 
   // Gambling
@@ -158,8 +186,8 @@ const COMMANDS = {
   profile: profile.profile,
   my: profile.profile,
   p: profile.profile,
-  level: profile.profile,
-  lvl: profile.profile,
+  level: fun.level,
+  lvl: fun.level,
   top: profile.top,
   lb: profile.top,
   leaderboard: profile.top,
