@@ -108,62 +108,141 @@ module.exports = {
     const totalAnimals = zooList.reduce((acc, curr) => acc + curr.count, 0);
     const uniqueAnimals = zooList.length;
 
-    // Group by tier
-    const grouped = {
-      distorted: [],
-      gem: [],
-      patreon: [],
-      bot: [],
-      hidden: [],
-      fabled: [],
-      mythical: [],
-      legendary: [],
-      special: [],
-      epic: [],
-      rare: [],
-      uncommon: [],
-      common: []
-    };
-
-    for (const animal of ANIMALS) {
-      const count = zooMap.get(animal.id);
-      if (count && count > 0) {
-        if (grouped[animal.tier]) {
-          grouped[animal.tier].push(`${animal.emoji} **${animal.name}** \`x${count}\``);
-        }
-      }
-    }
-
-    const embed = new EmbedBuilder()
-      .setColor('#8a7ff8')
-      .setTitle(`🐾 ${targetData.username}'s Zoo Collection ${getRandomFace()}`)
-      .setDescription(
-        `🏆 **Zoo Progress:** \`${uniqueAnimals}/${ANIMALS.length}\` unique animals discovered (\`${((uniqueAnimals / ANIMALS.length) * 100).toFixed(1)}%\`)\n` +
-        `📦 **Total Animal Count:** \`${totalAnimals.toLocaleString()}\` animals\n` +
-        `⭐ **Display Mascot:** ${targetData.display_animal || '🐶'}\n` +
-        `─────────────────────────────`
-      );
-
+    // Tier display order (rarest first)
     const tierOrder = ['distorted', 'gem', 'patreon', 'bot', 'hidden', 'fabled', 'mythical', 'legendary', 'special', 'epic', 'rare', 'uncommon', 'common'];
+
+    // Build pages — one page per tier that has animals
+    const pages = [];
     for (const tier of tierOrder) {
-      if (grouped[tier].length > 0) {
-        const tierMeta = TIER_INFO[tier];
-        embed.addFields({
-          name: `${tierMeta.name} (${grouped[tier].length})`,
-          value: grouped[tier].join(' ') || 'None',
-          inline: false
-        });
+      const tierAnimals = ANIMALS.filter(a => a.tier === tier);
+      if (tierAnimals.length === 0) continue;
+
+      const tierMeta = TIER_INFO[tier];
+      const collected = tierAnimals.filter(a => zooMap.has(a.id));
+      const tierProgress = `${collected.length}/${tierAnimals.length}`;
+
+      // Build animal lines — show ALL animals, locked ones as ???
+      const lines = tierAnimals.map(a => {
+        const count = zooMap.get(a.id);
+        if (count && count > 0) {
+          return `${a.emoji} **${a.name}** \`x${count}\``;
+        } else {
+          return `❓ ~~???~~ \`locked\``;
+        }
+      });
+
+      pages.push({
+        tier,
+        tierName: tierMeta.name,
+        color: tierMeta.color,
+        progress: tierProgress,
+        lines,
+        collectedCount: collected.length,
+        totalCount: tierAnimals.length,
+      });
+    }
+
+    // Build embed for a given page
+    function buildZooPage(pageIdx) {
+      const pg = pages[pageIdx];
+      const pctNum = Math.floor((pg.collectedCount / pg.totalCount) * 100);
+      const filled = Math.round(pctNum / 10);
+      const bar = '▓'.repeat(filled) + '░'.repeat(10 - filled);
+
+      const embed = new EmbedBuilder()
+        .setColor(pg.color)
+        .setTitle(`🐾 ${targetData.username}'s Zoo — ${pg.tierName}`)
+        .setDescription(
+          `🏆 **Overall:** \`${uniqueAnimals}/${ANIMALS.length}\` discovered (\`${((uniqueAnimals / ANIMALS.length) * 100).toFixed(1)}%\`)\n` +
+          `📦 **Total:** \`${totalAnimals.toLocaleString()}\` animals\n` +
+          `──────────────────────────\n\n` +
+          `**${pg.tierName} Progress:** \`${pg.progress}\` (${pctNum}%)\n` +
+          `\`[${bar}]\`\n\n` +
+          pg.lines.join('\n') +
+          `\n\nPage ${pageIdx + 1}/${pages.length}`
+        )
+        .setFooter({ text: `Use arrows to browse tiers • owo hunt to catch more!` });
+
+      return embed;
+    }
+
+    function buildZooButtons(pageIdx) {
+      const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+      return new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`zoo_prev_${message.author.id}_${pageIdx}`)
+          .setEmoji('◀️')
+          .setStyle(ButtonStyle.Primary)
+          .setDisabled(pageIdx === 0),
+        new ButtonBuilder()
+          .setCustomId(`zoo_info_${message.author.id}_${pageIdx}`)
+          .setLabel(`${pages[pageIdx].tierName} (${pageIdx + 1}/${pages.length})`)
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(true),
+        new ButtonBuilder()
+          .setCustomId(`zoo_next_${message.author.id}_${pageIdx}`)
+          .setEmoji('▶️')
+          .setStyle(ButtonStyle.Primary)
+          .setDisabled(pageIdx === pages.length - 1),
+      );
+    }
+
+    if (pages.length === 0) {
+      const embed = new EmbedBuilder()
+        .setColor('#8a7ff8')
+        .setTitle(`🐾 ${targetData.username}'s Zoo Collection ${getRandomFace()}`)
+        .setDescription(`Your zoo is currently empty! Use \`owo hunt\` to catch your first animal! ${getRandomFace()}`);
+      return message.reply({ embeds: [embed] });
+    }
+
+    // Start on common page (last page = easiest to collect first)
+    let currentPage = pages.length - 1;
+
+    // If user passes a tier name, jump to that page
+    const tierArg = (args[0] || '').toLowerCase();
+    if (tierArg && !message.mentions?.users?.first()) {
+      const foundIdx = pages.findIndex(p => p.tier.startsWith(tierArg) || p.tierName.toLowerCase().startsWith(tierArg));
+      if (foundIdx !== -1) currentPage = foundIdx;
+    }
+
+    const embed = buildZooPage(currentPage);
+    const row = buildZooButtons(currentPage);
+    const sentMsg = await message.reply({ embeds: [embed], components: [row] });
+
+    const { ComponentType } = require('discord.js');
+    const collector = sentMsg.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      time: 60000,
+    });
+
+    collector.on('collect', async (interaction) => {
+      if (interaction.user.id !== message.author.id) {
+        return interaction.reply({ content: `This isn't your zoo! Use \`owo zoo\` to view yours.`, ephemeral: true });
       }
-    }
 
-    if (uniqueAnimals === 0) {
-      embed.setDescription(`Your zoo is currently empty! Use \`owo hunt\` to catch your first animal! ${getRandomFace()}`);
-    }
+      const action = interaction.customId.split('_')[1];
+      if (action === 'prev' && currentPage > 0) currentPage--;
+      else if (action === 'next' && currentPage < pages.length - 1) currentPage++;
 
-    embed.setFooter({ text: `Type 'owo sell <tier/all>' to sell duplicate animals for Cowoncy!` });
+      await interaction.update({
+        embeds: [buildZooPage(currentPage)],
+        components: [buildZooButtons(currentPage)],
+      });
+    });
 
-    return message.reply({ embeds: [embed] });
+    collector.on('end', async () => {
+      try {
+        const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        const disabledRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('zoo_prev_x').setEmoji('◀️').setStyle(ButtonStyle.Secondary).setDisabled(true),
+          new ButtonBuilder().setCustomId('zoo_info_x').setLabel(`${pages[currentPage].tierName}`).setStyle(ButtonStyle.Secondary).setDisabled(true),
+          new ButtonBuilder().setCustomId('zoo_next_x').setEmoji('▶️').setStyle(ButtonStyle.Secondary).setDisabled(true),
+        );
+        await sentMsg.edit({ components: [disabledRow] });
+      } catch (e) {}
+    });
   },
+
 
   sell: async (message, args, user) => {
     const target = (args[0] || '').toLowerCase();
