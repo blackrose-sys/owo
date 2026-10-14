@@ -161,6 +161,7 @@ db.exec(`
 try { db.exec(`ALTER TABLE users ADD COLUMN active_team INTEGER DEFAULT 1;`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN team_name TEXT DEFAULT NULL;`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN team_name_2 TEXT DEFAULT NULL;`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN wallpaper TEXT DEFAULT 'default';`); } catch (e) {}
 try { db.exec(`ALTER TABLE weapons ADD COLUMN code TEXT;`); } catch (e) {}
 try { db.exec(`ALTER TABLE weapons ADD COLUMN quality REAL DEFAULT 50.0;`); } catch (e) {}
 try { db.exec(`ALTER TABLE weapons ADD COLUMN tier TEXT DEFAULT 'common';`); } catch (e) {}
@@ -189,6 +190,7 @@ const stmts = {
     WHERE id = ?
   `),
   setDisplayAnimal: db.prepare('UPDATE users SET display_animal = ? WHERE id = ?'),
+  setWallpaper: db.prepare('UPDATE users SET wallpaper = ? WHERE id = ?'),
   setTitle: db.prepare('UPDATE users SET title = ? WHERE id = ?'),
   marry: db.prepare('UPDATE users SET married_to = ?, married_name = ?, married_date = ? WHERE id = ?'),
   divorce: db.prepare('UPDATE users SET married_to = NULL, married_name = NULL, married_date = 0 WHERE id = ?'),

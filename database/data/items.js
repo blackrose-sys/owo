@@ -208,7 +208,8 @@ const SHOP_ITEMS = [
     emoji: '🌅',
     price: 35000,
     category: 'wallpaper',
-    description: 'A breathtaking orange-purple sunset over the ocean. Profile background.'
+    description: 'A breathtaking orange-purple sunset over the ocean. Profile background.',
+    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_galaxy',
@@ -216,7 +217,8 @@ const SHOP_ITEMS = [
     emoji: '🌌',
     price: 35000,
     category: 'wallpaper',
-    description: 'Deep space nebula with swirling purple and blue cosmic dust.'
+    description: 'Deep space nebula with swirling purple and blue cosmic dust.',
+    image: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_sakura',
@@ -224,7 +226,8 @@ const SHOP_ITEMS = [
     emoji: '🌸',
     price: 35000,
     category: 'wallpaper',
-    description: 'Cherry blossom petals floating across a serene Japanese garden.'
+    description: 'Cherry blossom petals floating across a serene Japanese garden.',
+    image: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_aurora',
@@ -232,7 +235,8 @@ const SHOP_ITEMS = [
     emoji: '🌈',
     price: 40000,
     category: 'wallpaper',
-    description: 'Vivid green and purple aurora borealis dancing across the arctic sky.'
+    description: 'Vivid green and purple aurora borealis dancing across the arctic sky.',
+    image: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_ocean',
@@ -240,7 +244,8 @@ const SHOP_ITEMS = [
     emoji: '🌊',
     price: 35000,
     category: 'wallpaper',
-    description: 'Calm deep ocean waves with bioluminescent creatures glowing below.'
+    description: 'Calm deep ocean waves with bioluminescent creatures glowing below.',
+    image: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_forest',
@@ -248,7 +253,8 @@ const SHOP_ITEMS = [
     emoji: '🌲',
     price: 35000,
     category: 'wallpaper',
-    description: 'Mystical forest with glowing fireflies and ancient towering trees.'
+    description: 'Mystical forest with glowing fireflies and ancient towering trees.',
+    image: 'https://images.unsplash.com/photo-1511497584788-87676104235f?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_volcano',
@@ -256,7 +262,8 @@ const SHOP_ITEMS = [
     emoji: '🌋',
     price: 40000,
     category: 'wallpaper',
-    description: 'Molten lava flows surrounded by obsidian cliffs. Fiery and intense!'
+    description: 'Molten lava flows surrounded by obsidian cliffs. Fiery and intense!',
+    image: 'https://images.unsplash.com/photo-1518457607834-6e8d80c183c5?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_cyberpunk',
@@ -264,7 +271,8 @@ const SHOP_ITEMS = [
     emoji: '🏙️',
     price: 40000,
     category: 'wallpaper',
-    description: 'Neon-lit futuristic cityscape with rain-slicked streets and holograms.'
+    description: 'Neon-lit futuristic cityscape with rain-slicked streets and holograms.',
+    image: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_snowmountain',
@@ -272,7 +280,8 @@ const SHOP_ITEMS = [
     emoji: '🏔️',
     price: 35000,
     category: 'wallpaper',
-    description: 'Pristine snow-capped mountain peak with clear blue skies.'
+    description: 'Pristine snow-capped mountain peak with clear blue skies.',
+    image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_desert',
@@ -280,7 +289,8 @@ const SHOP_ITEMS = [
     emoji: '🏜️',
     price: 35000,
     category: 'wallpaper',
-    description: 'Endless golden sand dunes under a blazing desert sun.'
+    description: 'Endless golden sand dunes under a blazing desert sun.',
+    image: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_candy',
@@ -288,7 +298,8 @@ const SHOP_ITEMS = [
     emoji: '🍭',
     price: 38000,
     category: 'wallpaper',
-    description: 'Sweet pastel candy kingdom with lollipop trees and chocolate rivers.'
+    description: 'Sweet pastel candy kingdom with lollipop trees and chocolate rivers.',
+    image: 'https://images.unsplash.com/photo-1582058091505-f87a2e55a40f?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_underwater',
@@ -296,7 +307,8 @@ const SHOP_ITEMS = [
     emoji: '🐚',
     price: 35000,
     category: 'wallpaper',
-    description: 'Vibrant underwater coral reef teeming with tropical fish.'
+    description: 'Vibrant underwater coral reef teeming with tropical fish.',
+    image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_dragon',
@@ -304,7 +316,8 @@ const SHOP_ITEMS = [
     emoji: '🐉',
     price: 50000,
     category: 'wallpaper',
-    description: 'An epic dragon\'s lair filled with treasure and glowing crystals. Premium!'
+    description: 'An epic dragon\'s lair filled with treasure and glowing crystals. Premium!',
+    image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_anime',
@@ -312,7 +325,8 @@ const SHOP_ITEMS = [
     emoji: '🗼',
     price: 45000,
     category: 'wallpaper',
-    description: 'Beautiful anime-style twilight cityscape with shooting stars.'
+    description: 'Beautiful anime-style twilight cityscape with shooting stars.',
+    image: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_retro',
@@ -320,7 +334,8 @@ const SHOP_ITEMS = [
     emoji: '🕹️',
     price: 38000,
     category: 'wallpaper',
-    description: 'Nostalgic 80s arcade with pixel art, neon grids, and synth vibes.'
+    description: 'Nostalgic 80s arcade with pixel art, neon grids, and synth vibes.',
+    image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_space',
@@ -328,7 +343,8 @@ const SHOP_ITEMS = [
     emoji: '🚀',
     price: 42000,
     category: 'wallpaper',
-    description: 'Orbital space station overlooking Earth with stars in the background.'
+    description: 'Orbital space station overlooking Earth with stars in the background.',
+    image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_haunted',
@@ -336,7 +352,8 @@ const SHOP_ITEMS = [
     emoji: '🏚️',
     price: 38000,
     category: 'wallpaper',
-    description: 'Spooky haunted mansion on a foggy hill with a full moon. Halloween vibes!'
+    description: 'Spooky haunted mansion on a foggy hill with a full moon. Halloween vibes!',
+    image: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'wp_rainbow',
@@ -344,7 +361,8 @@ const SHOP_ITEMS = [
     emoji: '🌈',
     price: 35000,
     category: 'wallpaper',
-    description: 'Lush green valley with a double rainbow and cascading waterfall.'
+    description: 'Lush green valley with a double rainbow and cascading waterfall.',
+    image: 'https://images.unsplash.com/photo-1508873696983-2df5293cb32f?auto=format&fit=crop&w=1200&q=80'
   },
 ];
 
@@ -482,6 +500,7 @@ function getRandomWeapon() {
 
 module.exports = {
   SHOP_ITEMS,
+  ITEMS: SHOP_ITEMS,
   WEAPONS,
   getItemById,
   getWeaponById,

@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const db = require('../../database/db');
 const { ANIMALS } = require('../../database/data/animals');
+const { ITEMS } = require('../../database/data/items');
 const { getRandomFace, getCowoncyEmoji } = require('../../database/data/dialogue');
 
 function makeProgressBar(current, max, size = 10) {
@@ -12,6 +13,12 @@ function makeProgressBar(current, max, size = 10) {
 
 module.exports = {
   profile: async (message, args, user) => {
+    // Check if subcommand: owo profile set wallpaper <id>
+    if (args[0]?.toLowerCase() === 'set' && (args[1]?.toLowerCase() === 'wallpaper' || args[1]?.toLowerCase() === 'wp')) {
+      const fun = require('./fun');
+      return fun.wallpaper(message, ['set', ...args.slice(2)], user);
+    }
+
     const targetUser = (message.mentions?.users && typeof message.mentions.users.first === 'function' ? message.mentions.users.first() : null) || message.author;
     const avatar = typeof targetUser.displayAvatarURL === 'function' ? targetUser.displayAvatarURL() : '';
     const targetData = db.getUser(targetUser.id, targetUser.username, avatar);
@@ -33,6 +40,10 @@ module.exports = {
       ? targetUser.displayAvatarURL({ dynamic: true }) 
       : 'https://api.dicebear.com/7.x/bottts/svg?seed=OwO';
 
+    const activeWp = targetData.wallpaper && targetData.wallpaper !== 'default'
+      ? ITEMS.find(i => i.id === targetData.wallpaper && i.category === 'wallpaper')
+      : null;
+
     const embed = new EmbedBuilder()
       .setColor('#8a7ff8')
       .setAuthor({ 
@@ -42,7 +53,8 @@ module.exports = {
       .setThumbnail(avatarUrl)
       .setDescription(
         `🎖️ **Title:** *${targetData.title || 'Novice Hunter'}*\n` +
-        `💖 **Relationship:** ${marriageText}\n\n` +
+        `💖 **Relationship:** ${marriageText}\n` +
+        (activeWp ? `🖼️ **Wallpaper:** ${activeWp.emoji} *${activeWp.name}*\n\n` : '\n') +
         `⭐ **Level Progress:** (Lv. ${targetData.level})\n` +
         `${progressBar} \`(${targetData.xp}/${xpNeeded} XP)\`\n\n` +
         `${getCowoncyEmoji(message?.client)} **Cowoncy:** \`${(targetData.cowoncy || 0).toLocaleString()}\`\n` +
@@ -52,6 +64,10 @@ module.exports = {
         `⚔️ **Battle Record:** \`${targetData.battles_won || 0}W / ${targetData.battles_lost || 0}L\``
       )
       .setFooter({ text: `Joined OwO Bot • Type 'owo help' for commands` });
+
+    if (activeWp && activeWp.image) {
+      embed.setImage(activeWp.image);
+    }
 
     return message.reply({ embeds: [embed] });
   },

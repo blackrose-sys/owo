@@ -1,5 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { getRandomFace } = require('../../database/data/dialogue');
+const db = require('../../database/db');
+const { ITEMS } = require('../../database/data/items');
 
 module.exports = {
   // owo define <word> — Urban Dictionary style definitions
@@ -291,19 +293,110 @@ module.exports = {
     return message.reply({ embeds: [embed] });
   },
 
-  // owo wallpaper — View or manage wallpapers (placeholder)
+  // owo wallpaper / owo wp — View, preview, or equip profile wallpapers
   wallpaper: async (message, args, user) => {
+    const sub = (args[0] || '').toLowerCase();
+    const query = args.slice(1).join(' ').trim().toLowerCase();
+    const allWallpapers = ITEMS.filter(i => i.category === 'wallpaper');
+
+    // Subcommand: PREVIEW <id/name>
+    if (sub === 'preview' || sub === 'view' || sub === 'see' || (sub && !['set', 'equip', 'use', 'reset', 'remove', 'list'].includes(sub) && allWallpapers.some(w => w.id === sub || w.name.toLowerCase().includes(sub) || w.id.replace('wp_', '') === sub))) {
+      const targetQuery = (sub === 'preview' || sub === 'view' || sub === 'see') ? query : args.join(' ').toLowerCase();
+      const wp = allWallpapers.find(w => w.id.toLowerCase() === targetQuery || w.id.replace('wp_', '').toLowerCase() === targetQuery || w.name.toLowerCase().includes(targetQuery));
+
+      if (!wp) {
+        return message.reply(`❌ Wallpaper not found! Try \`owo shop wp\` to see available wallpaper IDs, or \`owo wp\` to view your collection.`);
+      }
+
+      const owned = db.stmts.getItemCount.get(user.id, wp.id);
+      const isEquipped = (user.wallpaper || 'default') === wp.id;
+
+      const embed = new EmbedBuilder()
+        .setColor('#e91e63')
+        .setTitle(`🖼️ Wallpaper Preview: ${wp.emoji} ${wp.name}`)
+        .setDescription(
+          `**ID:** \`${wp.id}\`\n` +
+          `**Price:** \`${wp.price.toLocaleString()}\` Cowoncy\n` +
+          `**Status:** ${isEquipped ? '✨ **Currently Equipped**' : owned && owned.quantity > 0 ? '✅ **Owned** (Ready to equip with `owo wp set ' + wp.id + '`)' : '🛒 **Not Owned** (Buy with `owo buy ' + wp.id + '`)'}\n\n` +
+          `*${wp.description}*`
+        );
+
+      if (wp.image) embed.setImage(wp.image);
+      embed.setFooter({ text: `Tip: Use 'owo wp set ${wp.id}' to equip after buying!` });
+
+      return message.reply({ embeds: [embed] });
+    }
+
+    // Subcommand: SET / EQUIP <id/name>
+    if (sub === 'set' || sub === 'equip' || sub === 'use') {
+      if (!query) {
+        return message.reply(`❓ Which wallpaper do you want to equip? Usage: \`owo wp set <id>\` (e.g. \`owo wp set galaxy\`)`);
+      }
+
+      if (query === 'default' || query === 'none' || query === 'reset') {
+        db.stmts.setWallpaper.run('default', user.id);
+        return message.reply(`🖼️ Reset your active profile wallpaper back to **Default**!`);
+      }
+
+      const wp = allWallpapers.find(w => w.id.toLowerCase() === query || w.id.replace('wp_', '').toLowerCase() === query || w.name.toLowerCase().includes(query));
+
+      if (!wp) {
+        return message.reply(`❌ Could not find a wallpaper matching \`${query}\`! Use \`owo shop wp\` to browse.`);
+      }
+
+      const owned = db.stmts.getItemCount.get(user.id, wp.id);
+      if (!owned || owned.quantity <= 0) {
+        return message.reply(`❌ You do not own the **${wp.emoji} ${wp.name}** wallpaper! Buy it from the shop with \`owo buy ${wp.id}\` for **${wp.price.toLocaleString()} Cowoncy**.`);
+      }
+
+      db.stmts.setWallpaper.run(wp.id, user.id);
+
+      const embed = new EmbedBuilder()
+        .setColor('#4caf50')
+        .setTitle(`✨ Wallpaper Equipped!`)
+        .setDescription(
+          `🖼️ | **${message.author.username}**, equipped **${wp.emoji} ${wp.name}** as your active profile background! ${getRandomFace()}\n\n` +
+          `*Type \`owo profile\` to admire your new profile look!*`
+        );
+
+      if (wp.image) embed.setImage(wp.image);
+      return message.reply({ embeds: [embed] });
+    }
+
+    // Subcommand: RESET
+    if (sub === 'reset' || sub === 'remove') {
+      db.stmts.setWallpaper.run('default', user.id);
+      return message.reply(`🖼️ Reset your active profile wallpaper back to **Default**!`);
+    }
+
+    // Default: List owned wallpapers + current equipped status
+    const inv = db.stmts.getInventory.all(user.id);
+    const ownedWpIds = inv.filter(i => i.item_id.startsWith('wp_') && i.quantity > 0).map(i => i.item_id);
+    const ownedWallpapers = allWallpapers.filter(w => ownedWpIds.includes(w.id));
+    
+    const activeWpId = user.wallpaper || 'default';
+    const activeWp = allWallpapers.find(w => w.id === activeWpId);
+
     const embed = new EmbedBuilder()
       .setColor('#00bcd4')
-      .setTitle(`🖼️ ${message.author.username}'s Wallpapers`)
+      .setTitle(`🖼️ ${message.author.username}'s Wallpapers ${getRandomFace()}`)
       .setDescription(
-        `Manage your profile wallpapers!\n\n` +
-        `• \`owo shop wp\` — Browse wallpapers in the shop\n` +
-        `• \`owo buy <id>\` — Purchase a wallpaper\n` +
-        `• \`owo profile set wallpaper <id>\` — Set your active wallpaper\n\n` +
-        `*You currently have the **Default** wallpaper equipped.*`
+        `**Active Wallpaper:** ${activeWp ? `${activeWp.emoji} **${activeWp.name}** (\`${activeWp.id}\`)` : 'Default'}\n\n` +
+        `**Owned Wallpapers (${ownedWallpapers.length}/${allWallpapers.length}):**\n` +
+        (ownedWallpapers.length === 0 
+          ? `*You don't own any custom wallpapers yet! Buy some with \`owo buy <id>\` from \`owo shop wp\`!*` 
+          : ownedWallpapers.map(w => `${w.id === activeWpId ? '▶ ' : '• '} ${w.emoji} **${w.name}** — \`${w.id}\``).join('\n')
+        ) +
+        `\n\n**Commands:**\n` +
+        `• \`owo wp set <id>\` — Equip a wallpaper to your profile\n` +
+        `• \`owo wp preview <id>\` — View full artwork preview\n` +
+        `• \`owo shop wp\` — Browse the wallpaper shop`
       )
-      .setFooter({ text: `Tip: Use 'owo shop wp' to view available wallpapers!` });
+      .setFooter({ text: `Equip with: owo wp set <id> • Preview with: owo wp preview <id>` });
+
+    if (activeWp && activeWp.image) {
+      embed.setImage(activeWp.image);
+    }
 
     return message.reply({ embeds: [embed] });
   },

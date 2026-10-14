@@ -17,8 +17,8 @@ const SHOP_PAGES = [
   { title: 'OwO Shop: Rings', filter: 'rings', desc: 'Purchase a ring to propose to someone!\nAll rings are the same. Different tiers are available\nto show off your love!\n\n• `owo buy {id}` to buy an item\n• `owo sell {id}` to sell an item for 75% of its original price\n• `owo marry @user {id}` to use the ring' },
   { title: 'OwO Shop: Crates & Lootboxes', filter: ['crates', 'lootbox'], desc: 'Open crates for animals, weapons, and loot!\n\n• `owo buy {id}` to buy a crate\n• `owo use {id} all` to open all crates at once' },
   { title: 'OwO Shop: Gems & Consumables', filter: ['gems', 'consumable', 'battle'], desc: 'Power up your hunts, battles, and more!\n\n• `owo buy {id}` to buy an item\n• `owo use {id}` to activate the item' },
-  { title: 'OwO Shop: Wallpapers (1/2)', filter: 'wallpaper', desc: 'Customize your profile background!\nOnce purchased, wallpapers cannot be sold back.\n\n• `owo buy {id}` to buy a wallpaper\n• `owo wallpaper set {id}` to equip it', subPage: 0 },
-  { title: 'OwO Shop: Wallpapers (2/2)', filter: 'wallpaper', desc: 'More wallpapers for your profile!\n\n• `owo buy {id}` to buy a wallpaper\n• `owo wallpaper set {id}` to equip it', subPage: 1 },
+  { title: 'OwO Shop: Wallpapers (1/2)', filter: 'wallpaper', desc: 'Customize your profile background!\nOnce purchased, wallpapers cannot be sold back.\n\n• `owo buy {id}` to buy a wallpaper\n• `owo wp set {id}` to equip it\n• `owo wp preview {id}` to view full artwork!', subPage: 0 },
+  { title: 'OwO Shop: Wallpapers (2/2)', filter: 'wallpaper', desc: 'More wallpapers for your profile!\n\n• `owo buy {id}` to buy a wallpaper\n• `owo wp set {id}` to equip it\n• `owo wp preview {id}` to view full artwork!', subPage: 1 },
 ];
 
 const TOTAL_PAGES = SHOP_PAGES.length;
