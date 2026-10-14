@@ -40,10 +40,15 @@ module.exports = {
       uncommon: '`[U]`',
       rare: '`[R]`',
       epic: '`[E]`',
-      mythic: '`[M]`',
       legendary: '`[L]`',
+      mythical: '`[M]`',
       fabled: '`[F]`',
-      gem: '`[G]`'
+      hidden: '`[H]`',
+      gem: '`[G]`',
+      bot: '`[B]`',
+      distorted: '`[D]`',
+      patreon: '`[P]`',
+      special: '`[S]`'
     };
 
     for (const animal of caught) {
@@ -51,7 +56,7 @@ module.exports = {
       const badge = tierBadges[animal.tier] || '`[C]`';
       let text = `${badge} ${animal.emoji} **${animal.name}**`;
       if (isNew) text += ' `[NEW!]`';
-      if (['epic', 'mythic', 'legendary', 'fabled', 'gem'].includes(animal.tier)) {
+      if (['epic', 'legendary', 'mythical', 'fabled', 'hidden', 'gem', 'bot', 'distorted', 'patreon', 'special'].includes(animal.tier)) {
         text += ` ✨*(${animal.tier.toUpperCase()})*`;
         gotEpicOrHigher = true;
       }
@@ -105,10 +110,15 @@ module.exports = {
 
     // Group by tier
     const grouped = {
+      distorted: [],
       gem: [],
+      patreon: [],
+      bot: [],
+      hidden: [],
       fabled: [],
+      mythical: [],
       legendary: [],
-      mythic: [],
+      special: [],
       epic: [],
       rare: [],
       uncommon: [],
@@ -118,7 +128,9 @@ module.exports = {
     for (const animal of ANIMALS) {
       const count = zooMap.get(animal.id);
       if (count && count > 0) {
-        grouped[animal.tier].push(`${animal.emoji} **${animal.name}** \`x${count}\``);
+        if (grouped[animal.tier]) {
+          grouped[animal.tier].push(`${animal.emoji} **${animal.name}** \`x${count}\``);
+        }
       }
     }
 
@@ -132,7 +144,7 @@ module.exports = {
         `─────────────────────────────`
       );
 
-    const tierOrder = ['gem', 'fabled', 'legendary', 'mythic', 'epic', 'rare', 'uncommon', 'common'];
+    const tierOrder = ['distorted', 'gem', 'patreon', 'bot', 'hidden', 'fabled', 'mythical', 'legendary', 'special', 'epic', 'rare', 'uncommon', 'common'];
     for (const tier of tierOrder) {
       if (grouped[tier].length > 0) {
         const tierMeta = TIER_INFO[tier];
@@ -298,7 +310,7 @@ module.exports = {
     const zooList = db.getZoo(user.id);
     const zooMap = new Map(zooList.map(z => [z.animal_id, z.count]));
 
-    const tiers = ['common', 'uncommon', 'rare', 'epic', 'mythic', 'legendary', 'fabled', 'gem'];
+    const tiers = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical', 'fabled', 'hidden', 'gem', 'bot', 'distorted', 'patreon', 'special'];
     const tierSummaries = [];
 
     let totalCaughtSpecies = 0;
