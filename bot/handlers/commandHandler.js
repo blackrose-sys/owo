@@ -195,6 +195,7 @@ const COMMANDS = {
   prefix: admin.prefix,
   ping: admin.ping,
   stats: admin.stats,
+  setupking: admin.setupking,
 };
 
 const SOCIAL_ACTIONS = [
