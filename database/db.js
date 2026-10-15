@@ -167,6 +167,15 @@ try { db.exec(`ALTER TABLE weapons ADD COLUMN quality REAL DEFAULT 50.0;`); } ca
 try { db.exec(`ALTER TABLE weapons ADD COLUMN tier TEXT DEFAULT 'common';`); } catch (e) {}
 try { db.exec(`ALTER TABLE weapons ADD COLUMN equipped_to TEXT DEFAULT NULL;`); } catch (e) {}
 
+// Auto-cleanup any obsolete / orphaned animal IDs or non-positive counts from zoo
+try {
+  const { ANIMALS } = require('./data/animals');
+  if (Array.isArray(ANIMALS) && ANIMALS.length > 0) {
+    const validIds = ANIMALS.map(a => `'${a.id.replace(/'/g, "''")}'`).join(',');
+    db.exec(`DELETE FROM zoo WHERE count <= 0 OR animal_id NOT IN (${validIds});`);
+  }
+} catch (e) {}
+
 // Prepared statements for maximum performance
 const stmts = {
   getUser: db.prepare('SELECT * FROM users WHERE id = ?'),

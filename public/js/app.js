@@ -418,10 +418,13 @@ async function executeCommand(rawCommand) {
     const bet = resolveBet(args[0]);
     appendBotMessage(`🃏 **Higher or Lower (Bet: ${parseInt(bet).toLocaleString()} Cowoncy)**: Play the authentic Higher or Lower card streak game with cash out buttons in Discord using \`whl ${bet}\`!`);
   } else if (cmd === 'zoo' || cmd === 'z') {
-    const totalAnimals = state.zoo.reduce((a, b) => a + b.count, 0);
+    const validZoo = (state.zoo || []).filter(z => (z.count || 0) > 0 && (state.animals || []).some(a => a.id === z.animal_id));
+    const totalAnimals = validZoo.reduce((a, b) => a + (b.count || 0), 0);
+    const totalSpecies = (state.animals || []).length || 173;
+    const uniqueCount = Math.min(validZoo.length, totalSpecies);
     appendBotMessage(null, {
       title: `🐾 ${state.username}'s Zoo Collection`,
-      description: `🏆 Unique Animals Discovered: \`${state.zoo.length}/${state.animals.length}\`\n📦 Total Animal Count: \`${totalAnimals}\`\n⭐ Mascot: 🐶 Dog`,
+      description: `🏆 Unique Animals Discovered: \`${uniqueCount}/${totalSpecies}\`\n📦 Total Animal Count: \`${totalAnimals.toLocaleString()}\`\n⭐ Mascot: 🐶 Dog`,
       color: '#8a7ff8'
     });
   } else if (cmd === 'cash' || cmd === 'bal' || cmd === 'money' || cmd === 'c') {

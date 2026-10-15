@@ -104,9 +104,10 @@ module.exports = {
     const targetData = db.getUser(targetUser.id, targetUser.username, avatar);
     const zooList = db.getZoo(targetUser.id);
 
-    const zooMap = new Map(zooList.map(z => [z.animal_id, z.count]));
-    const totalAnimals = zooList.reduce((acc, curr) => acc + curr.count, 0);
-    const uniqueAnimals = zooList.length;
+    const validZoo = zooList.filter(z => (z.count || 0) > 0 && ANIMALS.some(a => a.id === z.animal_id));
+    const zooMap = new Map(validZoo.map(z => [z.animal_id, z.count]));
+    const totalAnimals = validZoo.reduce((acc, curr) => acc + curr.count, 0);
+    const uniqueAnimals = Math.min(validZoo.length, ANIMALS.length);
 
     // Tier display order (rarest first)
     const tierOrder = ['distorted', 'gem', 'patreon', 'bot', 'hidden', 'fabled', 'mythical', 'legendary', 'special', 'epic', 'rare', 'uncommon', 'common'];

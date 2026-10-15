@@ -27,8 +27,9 @@ module.exports = {
     const xpNeeded = targetData.level * 100;
     const progressBar = makeProgressBar(targetData.xp, xpNeeded);
 
-    const totalAnimals = zooList.reduce((acc, curr) => acc + curr.count, 0);
-    const uniqueAnimals = zooList.length;
+    const validZoo = zooList.filter(z => (z.count || 0) > 0 && ANIMALS.some(a => a.id === z.animal_id));
+    const totalAnimals = validZoo.reduce((acc, curr) => acc + curr.count, 0);
+    const uniqueAnimals = Math.min(validZoo.length, ANIMALS.length);
 
     let marriageText = 'Single';
     if (targetData.married_to) {
