@@ -74,11 +74,11 @@ module.exports = {
   },
 
   balance: async (message, args, user) => {
-    const targetUser = getMentionedUser(message) || message.author;
-    const targetData = db.getUser(targetUser.id, targetUser.username);
+    // Always show the caller's own balance only. Ignore any user mentions or IDs.
+    const authorData = db.getUser(message.author.id, message.author.username);
     const cEmoji = getCowoncyEmoji(message?.client);
 
-    return message.reply(`${cEmoji} | **${targetData.username}**, you currently have __**${(targetData.cowoncy || 0).toLocaleString()}**__ **cowoncy**!`);
+    return message.reply(`${cEmoji} | **${message.author.username}**, you currently have __**${(authorData.cowoncy || 0).toLocaleString()}**__ **cowoncy**!`);
   },
 
   give: async (message, args, user) => {

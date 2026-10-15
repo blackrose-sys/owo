@@ -44,6 +44,8 @@ module.exports = {
       ? ITEMS.find(i => i.id === targetData.wallpaper && i.category === 'wallpaper')
       : null;
 
+    const isSelf = targetUser.id === message.author.id;
+
     const embed = new EmbedBuilder()
       .setColor('#8a7ff8')
       .setAuthor({ 
@@ -57,7 +59,7 @@ module.exports = {
         (activeWp ? `🖼️ **Wallpaper:** ${activeWp.emoji} *${activeWp.name}*\n\n` : '\n') +
         `⭐ **Level Progress:** (Lv. ${targetData.level})\n` +
         `${progressBar} \`(${targetData.xp}/${xpNeeded} XP)\`\n\n` +
-        `${getCowoncyEmoji(message?.client)} **Cowoncy:** \`${(targetData.cowoncy || 0).toLocaleString()}\`\n` +
+        `${getCowoncyEmoji(message?.client)} **Cowoncy:** \`${isSelf ? (targetData.cowoncy || 0).toLocaleString() : '🔒 Hidden'}\`\n` +
         `🔥 **Daily Streak:** \`${targetData.daily_streak || 0} days\`\n\n` +
         `🐾 **Zoo Collection:** \`${uniqueAnimals}/${ANIMALS.length}\` unique (\`${totalAnimals.toLocaleString()}\` total)\n` +
         `🌲 **Hunts Completed:** \`${(targetData.hunts || 0).toLocaleString()}\`\n` +
