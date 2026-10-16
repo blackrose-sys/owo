@@ -74,6 +74,14 @@ const COMMANDS = {
   bs: fun.battlesetting,
   age: fun.age,
   wage: fun.age,
+  bading: fun.bading,
+  wbading: fun.bading,
+  badaps: fun.bading,
+  wbadaps: fun.bading,
+  bakla: fun.bading,
+  wbakla: fun.bading,
+  gay: fun.bading,
+  wgay: fun.bading,
 
   // Zoo & Compendium
   hunt: zoo.hunt,

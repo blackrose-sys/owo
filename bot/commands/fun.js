@@ -1,3 +1,5 @@
+const path = require('path');
+const fs = require('fs');
 const { EmbedBuilder } = require('discord.js');
 const { getRandomFace } = require('../../database/data/dialogue');
 const db = require('../../database/db');
@@ -500,6 +502,48 @@ module.exports = {
     else remark = '🧓 A living legend from the ancient era! Respect your elders!';
 
     return message.reply(`🎂 | **${targetName}** is **${age} years old**! ${remark} ${getRandomFace()}`);
+  },
+
+  // owo bading / wbading / wbadaps / wbakla / wgay — Send iconic glam cat meme
+  bading: async (message, args) => {
+    const imagePath = path.join(__dirname, '..', '..', 'assets', 'images', 'bading.jpg');
+    let target = null;
+
+    if (message.mentions?.users && typeof message.mentions.users.first === 'function' && message.mentions.users.first()) {
+      target = message.mentions.users.first();
+    } else if (args && args.length > 0) {
+      const name = args.join(' ').replace(/^@/, '').trim();
+      if (name) target = { username: name };
+    }
+
+    let text = '';
+    if (target) {
+      const phrases = [
+        `💅 | Uy si **${target.username}** oh! Napakaganda naman ni accla! 💋✨`,
+        `💄 | **${message.author.username}** tagged **${target.username}**! Bagay na bagay ang makeup mami! 💅✨`,
+        `💅 | Gandang hindi inakala! **${target.username}** serving looks today! 💋✨`,
+        `🌈 | **${target.username}** pakak na pakak ang eyeliner and lipstick today! 💅🔥`
+      ];
+      text = phrases[Math.floor(Math.random() * phrases.length)];
+    } else {
+      const phrases = [
+        `💅 | Pakak na pakak! Slay queen! 💋✨`,
+        `💄 | Ready na rumampa si mami! 💅✨`,
+        `💅 | Gandang hindi inakala! Look at this diva! 💋✨`,
+        `🌈 | Badaps gaming! Fresh na fresh! 💅🔥`
+      ];
+      text = phrases[Math.floor(Math.random() * phrases.length)];
+    }
+
+    if (fs.existsSync(imagePath)) {
+      return message.reply({
+        content: text,
+        files: [{ attachment: imagePath, name: 'bading.jpg' }]
+      });
+    } else {
+      return message.reply(text);
+    }
   }
 };
+
 

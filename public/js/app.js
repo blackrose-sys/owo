@@ -454,6 +454,13 @@ async function executeCommand(rawCommand) {
       const calculatedAge = (Math.abs(hash) % 70) + 10;
       appendBotMessage(`🎂 | **${targetName}** is **${calculatedAge} years old**! (◕‿◕✿)`);
     }
+  } else if (['bading', 'wbading', 'badaps', 'wbadaps', 'bakla', 'wbakla', 'gay', 'wgay'].includes(cmd)) {
+    const targetName = args[0] ? args.join(' ').replace(/^@/, '') : null;
+    let text = targetName 
+      ? `💅 | Uy si **${targetName}** oh! Napakaganda naman ni accla! 💋✨`
+      : `💅 | Pakak na pakak! Slay queen! 💋✨`;
+    appendBotMessage(text);
+    appendBotMessage(`<img src="/images/bading.jpg" style="max-width: 280px; border-radius: 8px; margin-top: 6px; display: block;" alt="bading cat">`);
   } else if (cmd === 'equip' || cmd === 'wequip' || cmd === 'eq' || cmd === 'weapon' || cmd === 'weapons') {
     try {
       const res = await fetch('/api/play', {
