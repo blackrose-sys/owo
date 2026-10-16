@@ -453,8 +453,53 @@ module.exports = {
     return message.reply({ embeds: [embed] });
   },
 
-  // owo sell — Sell animals for cowoncy (alias handled in zoo.js already, but adding explicit sell command)
-  // This is already in zoo.js, just making sure alias works
+  // owo age / wage <user> — Scan a user's age
+  age: async (message, args) => {
+    let target = null;
+    let targetName = '';
 
-  // owo huntbot / autohunt — already exists in zoo.js
+    if (message.mentions?.users && typeof message.mentions.users.first === 'function' && message.mentions.users.first()) {
+      target = message.mentions.users.first();
+      targetName = target.username;
+    } else if (args && args.length > 0) {
+      targetName = args.join(' ').replace(/^@/, '').trim();
+    } else {
+      target = message.author;
+      targetName = message.author.username;
+    }
+
+    const cleanName = targetName.toLowerCase();
+    const isRys = cleanName === 'rys' || cleanName.includes('rys') || (target?.id && target.username.toLowerCase().includes('rys'));
+
+    if (isRys) {
+      const roasts = [
+        `👴 | **${targetName}**'s age is **30+**! Too old haha! 💀 *(Back pain detected, unc status confirmed)*`,
+        `🧓 | **${targetName}** is officially **30+ years old**! Too old haha! Remembers when dinosaurs were house pets 🦖`,
+        `👴 | **${targetName}** age scan: **30+**! Too old haha! Bedtime is 8:30 PM with a mug of chamomile tea ☕👵`,
+        `🦴 | **${targetName}**'s age: **30+**! Too old haha! Knees pop like bubble wrap when standing up 😭👴`,
+        `👴 | **${targetName}** is **30+**! Too old haha! Needs reading glasses just to read Discord chat 👓👴`
+      ];
+      const pick = roasts[Math.floor(Math.random() * roasts.length)];
+      return message.reply(pick);
+    }
+
+    // Normal fun age scanner for other users
+    let hash = 0;
+    const str = target?.id || targetName;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    const age = (Math.abs(hash) % 70) + 10; // age between 10 and 79
+
+    let remark = '';
+    if (age < 18) remark = '👶 Still on baby mode! Don\'t forget to do your homework!';
+    else if (age < 25) remark = '🧑 Surviving purely on energy drinks, memes, and 3 hours of sleep!';
+    else if (age < 30) remark = '🧑‍💻 Adulting is hard, but you\'re hanging in there!';
+    else if (age < 50) remark = '👴 Approaching unc territory! Watch that lower back!';
+    else remark = '🧓 A living legend from the ancient era! Respect your elders!';
+
+    return message.reply(`🎂 | **${targetName}** is **${age} years old**! ${remark} ${getRandomFace()}`);
+  }
 };
+

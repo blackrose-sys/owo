@@ -72,6 +72,8 @@ const COMMANDS = {
   battlesettings: fun.battlesetting,
   bsetting: fun.battlesetting,
   bs: fun.battlesetting,
+  age: fun.age,
+  wage: fun.age,
 
   // Zoo & Compendium
   hunt: zoo.hunt,

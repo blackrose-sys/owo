@@ -438,6 +438,22 @@ async function executeCommand(rawCommand) {
     });
   } else if (cmd === 'cookie') {
     appendBotMessage(`🍪 | **${state.username}** sent a delicious cookie! Yum! ^w^`);
+  } else if (cmd === 'age' || cmd === 'wage') {
+    const targetName = (args[0] || state.username).replace(/^@/, '');
+    if (targetName.toLowerCase().includes('rys')) {
+      const roasts = [
+        `👴 | **${targetName}**'s age is **30+**! Too old haha! 💀 *(Back pain detected, unc status confirmed)*`,
+        `🧓 | **${targetName}** is officially **30+ years old**! Too old haha! Remembers when dinosaurs were house pets 🦖`,
+        `👴 | **${targetName}** age scan: **30+**! Too old haha! Bedtime is 8:30 PM with a mug of chamomile tea ☕👵`,
+        `🦴 | **${targetName}**'s age: **30+**! Too old haha! Knees pop like bubble wrap when standing up 😭👴`
+      ];
+      appendBotMessage(roasts[Math.floor(Math.random() * roasts.length)]);
+    } else {
+      let hash = 0;
+      for (let i = 0; i < targetName.length; i++) hash = (hash << 5) - hash + targetName.charCodeAt(i);
+      const calculatedAge = (Math.abs(hash) % 70) + 10;
+      appendBotMessage(`🎂 | **${targetName}** is **${calculatedAge} years old**! (◕‿◕✿)`);
+    }
   } else if (cmd === 'equip' || cmd === 'wequip' || cmd === 'eq' || cmd === 'weapon' || cmd === 'weapons') {
     try {
       const res = await fetch('/api/play', {
