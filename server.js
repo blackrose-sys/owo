@@ -686,8 +686,8 @@ if (process.env.DISCORD_TOKEN) {
   console.log('[OwO Server] No DISCORD_TOKEN found yet. You can enter one via the Web Dashboard or .env file.');
 }
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n======================================================`);
-  console.log(`✨ OwO Bot & Web Companion running at: http://localhost:${PORT}`);
+  console.log(`✨ OwO Bot & Web Companion running at: http://0.0.0.0:${PORT}`);
   console.log(`======================================================\n`);
 });

@@ -7,6 +7,9 @@
     "start": "node server.js",
     "deploy-commands": "node bot/deploy-commands.js"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "keywords": [
     "discord-bot",
     "owo",
