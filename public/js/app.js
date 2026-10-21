@@ -363,6 +363,7 @@ function appendBotMessage(text, embed = null) {
 
   history.appendChild(row);
   history.scrollTop = history.scrollHeight;
+  return row;
 }
 
 // Master Command Executor (supports wbj all, wcash, wcf all, wh, ws all, wdaily, etc.)
@@ -565,9 +566,63 @@ window.runQuickAction = async function(action, args = []) {
       else window.sound.playLoss();
       appendBotMessage(data.message);
     } else if (action === 'slots') {
-      if (data.multiplier > 0) window.sound.playWin();
-      else window.sound.playLoss();
-      appendBotMessage(data.message);
+      if (!data.success) {
+        appendBotMessage(`❌ ${data.message}`);
+        return;
+      }
+      const bet = data.bet || 50;
+      const [r1, r2, r3] = data.reels;
+      const spinImg = `<img src="/images/slots/slot_spin.gif" class="slot-reel-img" alt="spin" />`;
+      const cowoncyImg = `<img src="/cowoncy.png" class="cowoncy-icon" alt="cowoncy" />`;
+      const getReelImg = (sym) => `<img src="/images/slots/${sym}.png" class="slot-reel-img" alt="${sym}" />`;
+
+      const formatSlotHtml = (s1, s2, s3, outcomeHtml = '', isLoss = false) => {
+        return (
+          `<div class="slot-machine-box">` +
+            `<div class="slot-header"><code>___SLOTS___</code></div>` +
+            `<div class="slot-row">` +
+              `<code> </code> ` +
+              `<span class="slot-reels">${s1} ${s2} ${s3}</span> ` +
+              `<code> </code> ` +
+              `<span class="slot-bet-label">${state.username} bet ${cowoncyImg} ${bet.toLocaleString()}</span>` +
+            `</div>` +
+            `<div class="slot-row">` +
+              `<code>|         |</code>${outcomeHtml ? ` <span class="slot-outcome ${isLoss ? 'lost' : ''}">${outcomeHtml}</span>` : ''}` +
+            `</div>` +
+            `<div class="slot-row">` +
+              `<code>|         |</code>` +
+            `</div>` +
+          `</div>`
+        );
+      };
+
+      const msgRow = appendBotMessage(formatSlotHtml(spinImg, spinImg, spinImg));
+      const textElem = msgRow ? msgRow.querySelector('.msg-text') : null;
+
+      // Step 1: Reel 1 stops (1500ms)
+      setTimeout(() => {
+        if (textElem) textElem.innerHTML = formatSlotHtml(getReelImg(r1), spinImg, spinImg);
+
+        // Step 2: Reel 3 stops (700ms later = 2200ms total) - leaves Reel 2 spinning for suspense!
+        setTimeout(() => {
+          if (textElem) textElem.innerHTML = formatSlotHtml(getReelImg(r1), spinImg, getReelImg(r3));
+
+          // Step 3: Reel 2 locks (1100ms later = 3300ms total) & outcome appears
+          setTimeout(() => {
+            const isWin = data.winnings > 0;
+            const outcomeText = isWin
+              ? `and won ${cowoncyImg} ${data.winnings.toLocaleString()}`
+              : `and won nothing... :c`;
+
+            if (textElem) {
+              textElem.innerHTML = formatSlotHtml(getReelImg(r1), getReelImg(r2), getReelImg(r3), outcomeText, !isWin);
+            }
+
+            if (isWin) window.sound.playWin();
+            else window.sound.playLoss();
+          }, 1100);
+        }, 700);
+      }, 1500);
     }
 
     await loadUserData();

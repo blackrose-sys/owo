@@ -1573,3 +1573,86 @@ header.navbar {
   flex-wrap: wrap;
 }
 
+/* Authentic OwO Slot Machine Web Display */
+.slot-machine-box {
+  display: inline-block;
+  font-family: 'Consolas', 'Courier New', monospace;
+  line-height: 1.45;
+  background: rgba(20, 22, 28, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  margin: 0.35rem 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.slot-header {
+  margin-bottom: 0.25rem;
+  text-align: left;
+}
+
+.slot-header code {
+  background: #232428;
+  color: #fff;
+  font-weight: 800;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.slot-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.15rem 0;
+  white-space: nowrap;
+}
+
+.slot-row code {
+  background: #232428;
+  color: #e0e2e8;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.slot-reels {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.slot-reel-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  vertical-align: middle;
+  border-radius: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.slot-bet-label {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-weight: 600;
+  color: #f2f3f5;
+  margin-left: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.slot-outcome {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-weight: 700;
+  margin-left: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #57f287;
+}
+
+.slot-outcome.lost {
+  color: #ed4245;
+}
+

@@ -499,24 +499,71 @@ app.post('/api/play', (req, res) => {
   }
 
   if (action === 'slots') {
-    const bet = parseInt(args[0], 10) || 50;
+    const rawBet = args[0] || '50';
+    let bet = parseInt(rawBet, 10);
+    if (rawBet.toLowerCase() === 'all' || rawBet.toLowerCase() === 'a') {
+      bet = Math.min(Math.max(0, user.cowoncy), 250000);
+    } else if (rawBet.toLowerCase() === 'half' || rawBet.toLowerCase() === 'h') {
+      bet = Math.min(Math.max(0, Math.floor(user.cowoncy / 2)), 250000);
+    } else {
+      bet = Math.min(Math.max(1, bet || 50), 250000);
+    }
+
     if (user.cowoncy < bet) {
-      return res.json({ success: false, message: `❌ You only have ${user.cowoncy} Cowoncy!` });
+      return res.json({ success: false, message: `❌ You only have ${user.cowoncy.toLocaleString()} Cowoncy!` });
     }
 
     db.addCowoncy(userId, -bet);
     db.updateQuestProgress(userId, 'slots');
 
-    const symbols = ['💎', '👑', '🍒', '🍇', '🍋', '🍆'];
-    const r1 = symbols[Math.floor(Math.random() * symbols.length)];
-    const r2 = symbols[Math.floor(Math.random() * symbols.length)];
-    const r3 = symbols[Math.floor(Math.random() * symbols.length)];
+    // Authentic OwO Bot Odds & Payouts:
+    const roll = Math.random() * 100;
+    let r1, r2, r3, multiplier = 0;
 
-    let multiplier = 0;
-    if (r1 === r2 && r2 === r3) {
-      multiplier = (r1 === '💎') ? 10 : (r1 === '👑') ? 7 : (r1 === '🍒') ? 5 : 3;
-    } else if (r1 === r2 || r2 === r3 || r1 === r3) {
+    if (roll < 1.0) {
+      r1 = 'slot_o';
+      r2 = 'slot_w';
+      r3 = 'slot_o';
+      multiplier = 10;
+    } else if (roll < 3.5) {
+      r1 = 'slot_cowoncy';
+      r2 = 'slot_cowoncy';
+      r3 = 'slot_cowoncy';
+      multiplier = 4;
+    } else if (roll < 8.5) {
+      r1 = 'slot_cherry';
+      r2 = 'slot_cherry';
+      r3 = 'slot_cherry';
+      multiplier = 3;
+    } else if (roll < 28.5) {
+      r1 = 'slot_heart';
+      r2 = 'slot_heart';
+      r3 = 'slot_heart';
       multiplier = 2;
+    } else if (roll < 48.5) {
+      r1 = 'slot_eggplant';
+      r2 = 'slot_eggplant';
+      r3 = 'slot_eggplant';
+      multiplier = 1;
+    } else {
+      multiplier = 0;
+      const pool = ['slot_eggplant', 'slot_heart', 'slot_cherry', 'slot_cowoncy'];
+      if (Math.random() < 0.35) {
+        const matchSym = pool[Math.floor(Math.random() * pool.length)];
+        r1 = matchSym;
+        r3 = matchSym;
+        const remaining = pool.filter(s => s !== matchSym);
+        r2 = remaining[Math.floor(Math.random() * remaining.length)];
+      } else {
+        do {
+          r1 = pool[Math.floor(Math.random() * pool.length)];
+          r2 = pool[Math.floor(Math.random() * pool.length)];
+          r3 = pool[Math.floor(Math.random() * pool.length)];
+        } while (
+          (r1 === r2 && r2 === r3) ||
+          (r1 === 'slot_o' && r2 === 'slot_w' && r3 === 'slot_o')
+        );
+      }
     }
 
     const winnings = bet * multiplier;
@@ -528,12 +575,10 @@ app.post('/api/play', (req, res) => {
 
     return res.json({
       success: true,
+      bet,
       reels: [r1, r2, r3],
       multiplier,
       winnings,
-      message: multiplier > 0 
-        ? `🎰 [ ${r1} | ${r2} | ${r3} ] — Won **+${winnings.toLocaleString()} Cowoncy** (${multiplier}x)!`
-        : `🎰 [ ${r1} | ${r2} | ${r3} ] — Lost -${bet.toLocaleString()} Cowoncy ;w;`,
       user: db.getUser(userId)
     });
   }

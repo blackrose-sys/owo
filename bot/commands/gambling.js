@@ -20,6 +20,30 @@ try {
   CARDS_MAP = require('../../database/data/cards.json');
 } catch (e) {}
 
+let SLOTS_MAP = {};
+try {
+  SLOTS_MAP = require('../../database/data/slots.json');
+} catch (e) {}
+
+function getSlotEmoji(name, client = null) {
+  if (SLOTS_MAP[name]) {
+    const isAnim = name.includes('spin');
+    return isAnim ? `<a:${name}:${SLOTS_MAP[name]}>` : `<:${name}:${SLOTS_MAP[name]}>`;
+  }
+  if (client?.application?.emojis?.cache) {
+    const appMatch = client.application.emojis.cache.find(e => e.name.toLowerCase() === name.toLowerCase());
+    if (appMatch) return appMatch.toString();
+  }
+  if (name === 'slot_spin') return '🔄';
+  if (name === 'slot_eggplant') return '🍆';
+  if (name === 'slot_heart') return '💖';
+  if (name === 'slot_cherry') return '🍒';
+  if (name === 'slot_cowoncy' || name === 'cowoncy') return '💵';
+  if (name === 'slot_o') return '🅾️';
+  if (name === 'slot_w') return '🇼';
+  return '❓';
+}
+
 function getCardEmoji(card, client = null) {
   if (!card) return '`[ 🂠 ? ]`';
   const cleanSuit = (card.suit || '').replace(/\uFE0F/g, '');
@@ -197,7 +221,7 @@ module.exports = {
     }, 850);
   },
 
-  // --- 2. SLOTS (with realistic multi-stage reel stopping animation) ---
+  // --- 2. SLOTS (Exact Authentic OwO Bot layout, timing & animated emojis matching video) ---
   slots: async (message, args, user) => {
     const cd = checkCooldown(user.id, 'slots', 3);
     if (cd) return message.reply(`⏰ Slow down! Wait **${cd}s** before spinning again!`);
@@ -213,78 +237,116 @@ module.exports = {
     db.addCowoncy(user.id, -bet);
     db.updateQuestProgress(user.id, 'slots');
 
-    const symbols = ['💎', '👑', '🍒', '🍇', '🍋', '🍆'];
-    const weights = [3, 6, 12, 18, 28, 33];
+    // Authentic OwO Bot Odds & Payouts:
+    // 1.0%  -> O w O (10x payout)
+    // 2.5%  -> 3x Cowoncy (4x payout)
+    // 5.0%  -> 3x Cherry (3x payout)
+    // 20.0% -> 3x Heart (2x payout)
+    // 20.0% -> 3x Eggplant (1x payout - refund)
+    // 51.5% -> Loss (0x payout - "and won nothing... :c")
+    const roll = Math.random() * 100;
+    let reel1Sym, reel2Sym, reel3Sym, multiplier = 0;
 
-    function pickSymbol() {
-      const total = weights.reduce((a, b) => a + b, 0);
-      let rand = Math.random() * total;
-      for (let i = 0; i < symbols.length; i++) {
-        if (rand < weights[i]) return symbols[i];
-        rand -= weights[i];
-      }
-      return '🍆';
-    }
-
-    const reel1 = pickSymbol();
-    const reel2 = pickSymbol();
-    const reel3 = pickSymbol();
-
-    let multiplier = 0;
-    if (reel1 === reel2 && reel2 === reel3) {
-      if (reel1 === '💎') multiplier = 10;
-      else if (reel1 === '👑') multiplier = 7;
-      else if (reel1 === '🍒') multiplier = 5;
-      else if (reel1 === '🍇') multiplier = 4;
-      else if (reel1 === '🍋') multiplier = 3;
-      else multiplier = 3;
-    } else if (reel1 === reel2 || reel2 === reel3 || reel1 === reel3) {
+    if (roll < 1.0) {
+      reel1Sym = 'slot_o';
+      reel2Sym = 'slot_w';
+      reel3Sym = 'slot_o';
+      multiplier = 10;
+    } else if (roll < 3.5) {
+      reel1Sym = 'slot_cowoncy';
+      reel2Sym = 'slot_cowoncy';
+      reel3Sym = 'slot_cowoncy';
+      multiplier = 4;
+    } else if (roll < 8.5) {
+      reel1Sym = 'slot_cherry';
+      reel2Sym = 'slot_cherry';
+      reel3Sym = 'slot_cherry';
+      multiplier = 3;
+    } else if (roll < 28.5) {
+      reel1Sym = 'slot_heart';
+      reel2Sym = 'slot_heart';
+      reel3Sym = 'slot_heart';
       multiplier = 2;
+    } else if (roll < 48.5) {
+      reel1Sym = 'slot_eggplant';
+      reel2Sym = 'slot_eggplant';
+      reel3Sym = 'slot_eggplant';
+      multiplier = 1;
+    } else {
+      multiplier = 0;
+      const pool = ['slot_eggplant', 'slot_heart', 'slot_cherry', 'slot_cowoncy'];
+      // Authentic slot drama: 35% chance Reel 1 and Reel 3 match, but Reel 2 misses!
+      if (Math.random() < 0.35) {
+        const matchSym = pool[Math.floor(Math.random() * pool.length)];
+        reel1Sym = matchSym;
+        reel3Sym = matchSym;
+        const remaining = pool.filter(s => s !== matchSym);
+        reel2Sym = remaining[Math.floor(Math.random() * remaining.length)];
+      } else {
+        do {
+          reel1Sym = pool[Math.floor(Math.random() * pool.length)];
+          reel2Sym = pool[Math.floor(Math.random() * pool.length)];
+          reel3Sym = pool[Math.floor(Math.random() * pool.length)];
+        } while (
+          (reel1Sym === reel2Sym && reel2Sym === reel3Sym) ||
+          (reel1Sym === 'slot_o' && reel2Sym === 'slot_w' && reel3Sym === 'slot_o')
+        );
+      }
     }
 
     const winnings = bet * multiplier;
+    const authorName = message.author.username;
+    const client = message.client;
 
-    // Step 1: Initial reel spin
-    const spinMsg = await message.reply(
-      `🎰 | **${message.author.username}** spent **${bet.toLocaleString()}** cowoncy\n` +
-      `[ 🔄 | 🔄 | 🔄 ]`
-    );
+    const spinEm = getSlotEmoji('slot_spin', client);
+    const r1Em = getSlotEmoji(reel1Sym, client);
+    const r2Em = getSlotEmoji(reel2Sym, client);
+    const r3Em = getSlotEmoji(reel3Sym, client);
+    const cowoncyEm = getSlotEmoji('cowoncy', client);
 
-    // Step 2: Lock reel 1 (450ms)
+    const formatBoard = (r1, r2, r3, outcomeText = '') => {
+      return (
+        `       **\`___SLOTS___\`**\n` +
+        `\` \` ${r1} ${r2} ${r3} \` \` ${authorName} bet ${cowoncyEm} ${bet.toLocaleString()}\n` +
+        `\`|         |\`${outcomeText ? ` ${outcomeText}` : ''}\n` +
+        `\`|         |\``
+      );
+    };
+
+    // Send using channel.send if message, or reply if interaction/cannot send directly
+    let spinMsg;
+    try {
+      if (typeof message.channel?.send === 'function' && !message.isCommand && !message.isChatInputCommand) {
+        spinMsg = await message.channel.send(formatBoard(spinEm, spinEm, spinEm));
+      } else {
+        spinMsg = await message.reply(formatBoard(spinEm, spinEm, spinEm));
+      }
+    } catch (e) {
+      spinMsg = await message.reply(formatBoard(spinEm, spinEm, spinEm));
+    }
+
+    // Step 1: Reel 1 stops (1500ms)
     setTimeout(async () => {
-      await spinMsg.edit(
-        `🎰 | **${message.author.username}** spent **${bet.toLocaleString()}** cowoncy\n` +
-        `[ ${reel1} | 🔄 | 🔄 ]`
-      ).catch(() => {});
+      await spinMsg.edit(formatBoard(r1Em, spinEm, spinEm)).catch(() => {});
 
-      // Step 3: Lock reel 2 (950ms)
+      // Step 2: Reel 3 stops (700ms later = 2200ms total) - leaves Reel 2 spinning for peak suspense!
       setTimeout(async () => {
-        await spinMsg.edit(
-          `🎰 | **${message.author.username}** spent **${bet.toLocaleString()}** cowoncy\n` +
-          `[ ${reel1} | ${reel2} | 🔄 ]`
-        ).catch(() => {});
+        await spinMsg.edit(formatBoard(r1Em, spinEm, r3Em)).catch(() => {});
 
-        // Step 4: Lock reel 3 & reveal outcome (1500ms)
+        // Step 3: Reel 2 locks (1100ms later = 3300ms total) & outcome text appears!
         setTimeout(async () => {
-          if (winnings > 0) db.addCowoncy(user.id, winnings);
-
-          let resultText = '';
-          if (multiplier >= 7) {
-            resultText = `and won **${winnings.toLocaleString()}** cowoncy! 🔥 **JACKPOT!**`;
-          } else if (multiplier > 0) {
-            resultText = `and won **${winnings.toLocaleString()}** cowoncy! 🎉`;
-          } else {
-            resultText = `and lost it all... :c`;
+          if (winnings > 0) {
+            db.addCowoncy(user.id, winnings);
           }
 
-          await spinMsg.edit(
-            `🎰 | **${message.author.username}** spent **${bet.toLocaleString()}** cowoncy\n` +
-            `[ ${reel1} | ${reel2} | ${reel3} ]\n` +
-            `${resultText}`
-          ).catch(() => {});
-        }, 550);
-      }, 500);
-    }, 450);
+          const outcomeText = winnings > 0
+            ? `and won ${cowoncyEm} ${winnings.toLocaleString()}`
+            : `and won nothing... :c`;
+
+          await spinMsg.edit(formatBoard(r1Em, r2Em, r3Em, outcomeText)).catch(() => {});
+        }, 1100);
+      }, 700);
+    }, 1500);
   },
 
   // --- 3. BLACKJACK (Exact authentic OwO Embed & Custom Emojis matching Picture 1) ---
