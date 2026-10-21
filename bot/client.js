@@ -30,7 +30,7 @@ function createClient() {
     partials: [Partials.Message, Partials.Channel, Partials.Reaction]
   });
 
-  client.once('ready', async () => {
+  const onReady = async () => {
     botStatus.isOnline = true;
     botStatus.tag = client.user.tag;
     botStatus.id = client.user.id;
@@ -86,7 +86,10 @@ function createClient() {
         botStatus.ping = Math.round(client.ws.ping);
       }
     }, 20000);
-  });
+  };
+
+  client.once('ready', onReady);
+  client.once('clientReady', onReady);
 
   client.on('messageCreate', async (message) => {
     try {
@@ -112,17 +115,37 @@ function createClient() {
   return client;
 }
 
+let isLoggingIn = false;
+
 async function startBot(token) {
-  if (!token) {
+  if (!token || typeof token !== 'string') {
     botStatus.error = 'No Discord bot token provided.';
     return false;
   }
 
+  const cleanToken = token.trim().replace(/^["']|["']$/g, '');
+  if (!cleanToken) {
+    botStatus.error = 'Empty Discord bot token provided.';
+    return false;
+  }
+
+  if (client && client.isReady()) {
+    return true;
+  }
+
+  if (isLoggingIn) {
+    console.log('[OwO Bot] Login attempt already in progress...');
+    return true;
+  }
+
+  isLoggingIn = true;
   try {
     const botClient = createClient();
-    await botClient.login(token);
+    await botClient.login(cleanToken);
+    isLoggingIn = false;
     return true;
   } catch (err) {
+    isLoggingIn = false;
     botStatus.error = err.message;
     console.error('[OwO Bot] Failed to login with token:', err.message);
     return false;
@@ -130,11 +153,21 @@ async function startBot(token) {
 }
 
 function getBotStatus() {
-  if (client && client.ws) {
-    botStatus.ping = Math.round(client.ws.ping);
-    if (client.guilds) {
+  if (client) {
+    if (client.isReady()) {
+      botStatus.isOnline = true;
+    }
+    if (client.user) {
+      botStatus.tag = client.user.tag;
+      botStatus.id = client.user.id;
+      botStatus.avatar = client.user.displayAvatarURL();
+    }
+    if (client.ws) {
+      botStatus.ping = Math.round(client.ws.ping);
+    }
+    if (client.guilds && client.guilds.cache) {
       botStatus.guildCount = client.guilds.cache.size;
-      botStatus.userCount = client.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0);
+      botStatus.userCount = client.guilds.cache.reduce((acc, g) => acc + (g.memberCount || 0), 0);
     }
   }
   return botStatus;
