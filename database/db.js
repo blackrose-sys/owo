@@ -49,9 +49,13 @@ if (dbPath !== defaultDbPath && !fs.existsSync(dbPath) && fs.existsSync(defaultD
 
 const db = new Database(dbPath);
 
-// Enable WAL mode for high performance concurrent reads and writes
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+// Use standard journal mode for cloud container stability and zero-wal corruption
+try {
+  db.pragma('journal_mode = DELETE');
+  db.pragma('foreign_keys = ON');
+} catch (e) {
+  console.error('[DB Pragma Note]:', e.message);
+}
 
 // Periodic automatic database backup every 30 minutes to prevent data loss
 setInterval(() => {

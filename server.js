@@ -40,6 +40,11 @@ function broadcast(type, data) {
 }
 
 // REST APIs
+// 0. Health check endpoint for uptime monitors and keep-alive
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: Date.now() });
+});
+
 // 1. Bot & System status
 app.get('/api/status', (req, res) => {
   const status = getBotStatus();
@@ -690,4 +695,19 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n======================================================`);
   console.log(`✨ OwO Bot & Web Companion running at: http://0.0.0.0:${PORT}`);
   console.log(`======================================================\n`);
+
+  // Render 24/7 Keep-Alive Ping (prevents free instance from spinning down on inactivity)
+  const keepAliveUrl = process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_URL;
+  if (keepAliveUrl) {
+    const https = require('https');
+    const targetPing = keepAliveUrl.startsWith('http') ? `${keepAliveUrl}/api/health` : `https://${keepAliveUrl}/api/health`;
+    console.log(`[KeepAlive] 24/7 Cloud Uptime self-ping active for: ${targetPing}`);
+    setInterval(() => {
+      https.get(targetPing, (res) => {
+        res.resume();
+      }).on('error', (err) => {
+        console.log('[KeepAlive] Ping tick status:', err.message);
+      });
+    }, 10 * 60 * 1000); // 10 minutes
+  }
 });
